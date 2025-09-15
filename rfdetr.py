@@ -248,8 +248,8 @@ def compare_images(before_photo, after_photo, result_photo):
         matched_pairs, used_after_indices = match_objects(before_results, after_results)
         
         # === CLASS NAME MAPPING ===
-        # COCO dataset class names (80 standard object classes)
-        # RF-DETR model is trained on COCO, so these are the detectable object types
+        # COCO dataset class names - FILTERED for indoor business/residential environments
+        # Focus on objects commonly found in offices, hotels, Airbnb, and professional buildings
         COCO_CLASSES = [
             "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
             "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
@@ -262,6 +262,50 @@ def compare_images(before_photo, after_photo, result_photo):
             "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink",
             "refrigerator", "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
         ]
+        
+        # Define indoor/business relevant classes (subset of COCO indices)
+        # These are the object types we care about for professional buildings and rentals
+        INDOOR_BUSINESS_CLASSES = {
+            0: "person",           # People in the space
+            24: "backpack",        # Luggage/personal items
+            26: "handbag",         # Personal bags
+            27: "tie",             # Professional attire
+            28: "suitcase",        # Travel luggage (Airbnb guests)
+            39: "bottle",          # Water bottles, beverages
+            40: "wine glass",      # Dining/entertainment
+            41: "cup",             # Coffee cups, mugs
+            42: "fork",            # Dining utensils
+            43: "knife",           # Kitchen utensils
+            44: "spoon",           # Dining utensils
+            45: "bowl",            # Dishes
+            46: "banana",          # Food items
+            47: "apple",           # Food items
+            48: "sandwich",        # Food items
+            56: "chair",           # Office/dining furniture
+            57: "couch",           # Lounge furniture
+            58: "potted plant",    # Decor/ambiance
+            59: "bed",             # Bedroom furniture
+            60: "dining table",    # Dining/meeting furniture
+            61: "toilet",          # Bathroom fixtures
+            62: "tv",              # Entertainment/presentation
+            63: "laptop",          # Work equipment
+            64: "mouse",           # Computer peripherals
+            65: "remote",          # TV/AC controls
+            66: "keyboard",        # Computer equipment
+            67: "cell phone",      # Personal devices
+            68: "microwave",       # Kitchen appliances
+            69: "oven",            # Kitchen appliances
+            70: "toaster",         # Kitchen appliances
+            71: "sink",            # Kitchen/bathroom fixtures
+            72: "refrigerator",    # Kitchen appliances
+            73: "book",            # Reading materials/decor
+            74: "clock",           # Time displays
+            75: "vase",            # Decorative items
+            76: "scissors",        # Office supplies
+            77: "teddy bear",      # Comfort items (hotels)
+            78: "hair drier",      # Bathroom amenities
+            79: "toothbrush"       # Personal hygiene items
+        }
         
         # === VISUALIZATION SETUP ===
         # Create side-by-side subplot layout for comparison
@@ -283,11 +327,15 @@ def compare_images(before_photo, after_photo, result_photo):
         before_scores = before_results["scores"].cpu().numpy()
         
         for i, (box, label, score) in enumerate(zip(before_boxes, before_labels, before_scores)):
+            # Only show objects that are relevant to indoor/business environments
+            if label not in INDOOR_BUSINESS_CLASSES:
+                continue
+                
             x1, y1, x2, y2 = box
             width = x2 - x1
             height = y2 - y1
             
-            class_name = COCO_CLASSES[label] if label < len(COCO_CLASSES) else f"class_{label}"
+            class_name = INDOOR_BUSINESS_CLASSES[label]
             
             rect = patches.Rectangle((x1, y1), width, height, linewidth=2, 
                                    edgecolor='blue', facecolor='none')
@@ -309,18 +357,22 @@ def compare_images(before_photo, after_photo, result_photo):
         # Draw matched objects (GREEN - still present)
         matched_before_indices = set()
         for before_idx, after_idx, iou in matched_pairs:
+            # Only process objects relevant to indoor/business environments
+            label = after_labels[after_idx]
+            if label not in INDOOR_BUSINESS_CLASSES:
+                continue
+                
             matched_before_indices.add(before_idx)
             still_present += 1
             
             box = after_boxes[after_idx]
-            label = after_labels[after_idx]
             score = after_scores[after_idx]
             
             x1, y1, x2, y2 = box
             width = x2 - x1
             height = y2 - y1
             
-            class_name = COCO_CLASSES[label] if label < len(COCO_CLASSES) else f"class_{label}"
+            class_name = INDOOR_BUSINESS_CLASSES[label]
             
             rect = patches.Rectangle((x1, y1), width, height, linewidth=3, 
                                    edgecolor='green', facecolor='none')
@@ -332,19 +384,23 @@ def compare_images(before_photo, after_photo, result_photo):
         # Draw missing objects (RED - positions from before image)
         for i in range(len(before_boxes)):
             if i not in matched_before_indices:
+                label = before_labels[i]
+                # Only process objects relevant to indoor/business environments
+                if label not in INDOOR_BUSINESS_CLASSES:
+                    continue
+                    
                 missing += 1
                 
                 # Project the missing object's position onto the after image
                 # For simplicity, we'll show it at the same coordinates
                 box = before_boxes[i]
-                label = before_labels[i]
                 score = before_scores[i]
                 
                 x1, y1, x2, y2 = box
                 width = x2 - x1
                 height = y2 - y1
                 
-                class_name = COCO_CLASSES[label] if label < len(COCO_CLASSES) else f"class_{label}"
+                class_name = INDOOR_BUSINESS_CLASSES[label]
                 
                 rect = patches.Rectangle((x1, y1), width, height, linewidth=3, 
                                        edgecolor='red', facecolor='none', linestyle='--')
@@ -356,17 +412,21 @@ def compare_images(before_photo, after_photo, result_photo):
         # Draw new objects (BLACK - new in after image)
         for i in range(len(after_boxes)):
             if i not in used_after_indices:
+                label = after_labels[i]
+                # Only process objects relevant to indoor/business environments
+                if label not in INDOOR_BUSINESS_CLASSES:
+                    continue
+                    
                 new_objects += 1
                 
                 box = after_boxes[i]
-                label = after_labels[i]
                 score = after_scores[i]
                 
                 x1, y1, x2, y2 = box
                 width = x2 - x1
                 height = y2 - y1
                 
-                class_name = COCO_CLASSES[label] if label < len(COCO_CLASSES) else f"class_{label}"
+                class_name = INDOOR_BUSINESS_CLASSES[label]
                 
                 rect = patches.Rectangle((x1, y1), width, height, linewidth=3, 
                                        edgecolor='black', facecolor='none')
@@ -392,13 +452,21 @@ def compare_images(before_photo, after_photo, result_photo):
         plt.close()  # Free memory by closing the plot
         
         # === PRINT SUMMARY STATISTICS ===
-        print(f"\nComparison Summary:")
+        # Calculate total relevant objects (filtered for indoor/business classes)
+        total_before_relevant = sum(1 for label in before_labels if label in INDOOR_BUSINESS_CLASSES)
+        total_after_relevant = sum(1 for label in after_labels if label in INDOOR_BUSINESS_CLASSES)
+        
+        print(f"\nComparison Summary (Indoor/Business Objects Only):")
         print(f"  Still Present: {still_present} objects")  # GREEN boxes
         print(f"  Missing: {missing} objects")              # RED boxes  
         print(f"  New Objects: {new_objects} objects")      # BLACK boxes
-        print(f"  Total Before: {len(before_boxes)} objects")
-        print(f"  Total After: {len(after_boxes)} objects")
+        print(f"  Total Before: {total_before_relevant} relevant objects ({len(before_boxes)} total detected)")
+        print(f"  Total After: {total_after_relevant} relevant objects ({len(after_boxes)} total detected)")
         print(f"Comparison result saved to: {result_photo}")
+        
+        # Print what types of objects we're focusing on
+        print(f"\nFocusing on {len(INDOOR_BUSINESS_CLASSES)} indoor/business object types:")
+        print(f"  {', '.join(sorted(INDOOR_BUSINESS_CLASSES.values()))}")
         
         # Return summary string for the main timing system
         return f"Comparison completed - {still_present} present, {missing} missing, {new_objects} new"

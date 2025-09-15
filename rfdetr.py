@@ -8,17 +8,12 @@ import numpy as np                                             # Numerical opera
 import matplotlib.pyplot as plt                               # Plotting and visualization
 import matplotlib.patches as patches                          # Drawing shapes on plots
 
-def rfdetr():
+def rfdetr(before_photo="before.jpg", after_photo="after.jpg", result_photo="rfdetr_comparison_result.jpg"):
     """
     Main RF-DETR function for object detection comparison
     This is the entry point called by main.py for timing comparisons
     """
     print("Running RF-DETR model...")
-    
-    # Define hardcoded image paths that the function expects to find
-    before_photo = "before.jpg"          # First image to compare
-    after_photo = "after.jpg"            # Second image to compare  
-    result_photo = "rfdetr_comparison_result.jpg"  # Output comparison image
     
     # Call the main comparison function with the image paths
     result = compare_images(before_photo, after_photo, result_photo)

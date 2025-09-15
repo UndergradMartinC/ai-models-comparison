@@ -8,7 +8,7 @@ import numpy as np                                             # Numerical opera
 import matplotlib.pyplot as plt                               # Plotting and visualization
 import matplotlib.patches as patches                          # Drawing shapes on plots
 
-def rfdetr(before_photo="before.jpg", after_photo="after.jpg", result_photo="rfdetr_comparison_result.jpg"):
+def rfdetr(before_photo="before.jpg", after_photo="after.jpg", result_photo="rfdetr_result.jpg"):
     """
     Main RF-DETR function for object detection comparison
     This is the entry point called by main.py for timing comparisons

@@ -5,8 +5,8 @@ from transformers import RTDetrForObjectDetection, RTDetrImageProcessor  # Huggi
 from PIL import Image                                          # Image loading and processing
 import cv2                                                     # OpenCV for computer vision
 import numpy as np                                             # Numerical operations
-import matplotlib.pyplot as plt                               # Plotting and visualization
-import matplotlib.patches as patches                          # Drawing shapes on plots
+import matplotlib.pyplot as plt                                # Plotting and visualization
+import matplotlib.patches as patches                           # Drawing shapes on plots
 
 def rfdetr(before_photo="before.jpg", after_photo="after.jpg", result_photo="rfdetr_result.jpg"):
     """

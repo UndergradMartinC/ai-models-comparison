@@ -12,11 +12,12 @@ def dino(before_photo="before.jpg", after_photo="after.jpg", result_photo="dino_
     """
     Main DINO function for object detection comparison
     This is the entry point called by main.py for timing comparisons
+    Now uses the enhanced RF-DETR with DINO boost for best performance
     """
     print("Running DINO model...")
     
-    # Call the main comparison function with the image paths
-    result = compare_images(before_photo, after_photo, result_photo)
+    # Call the enhanced RF-DETR function with DINO improvements
+    result = rfdetr_with_dino_boost(before_photo, after_photo, result_photo)
     
     # Return result string for the timing system in main.py
     return result

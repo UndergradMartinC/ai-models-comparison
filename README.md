@@ -1,51 +1,54 @@
-# ai-models-comparison
+# AI Models Comparison
 
-Simple harness to compare models and a standalone YOLOX demo.
+Real object detection system comparing YOLOX and Grounding DINO models.
 
-## Run comparison
+## 🚀 Quick Start
 
+### Download Model Weights
+
+Before running, download the required model weights:
+
+```bash
+# Create weights directory
+mkdir -p weights
+
+# Download YOLOX-X weights (757MB)
+wget https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_x.pth
+
+# Download Grounding DINO weights (662MB)
+wget https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth -P weights/
+
+# Download Grounding DINO config
+wget https://raw.githubusercontent.com/IDEA-Research/GroundingDINO/main/groundingdino/config/GroundingDINO_SwinT_OGC.py -P weights/
+```
+
+## 🔍 Run Individual Models
+
+### YOLOX Standalone
+```bash
+python3 yolox_detector.py
+```
+- Detects objects using COCO classes (80 categories)
+- Outputs: `outputs/yolox_*_detections.json` and `outputs/yolox_*_visualization.jpg`
+
+### Grounding DINO Standalone  
+```bash
+python3 grounding_dino.py
+```
+- Open vocabulary detection (75+ object types)
+- Outputs: `outputs/dino_*_detections.json` and `outputs/dino_*_visualization.jpg`
+
+## ⏱️ Timing Comparison
+
+Compare all models with timing analysis:
 ```bash
 python3 main.py
 ```
 
-## YOLOX standalone demo
+## 📊 Features
 
-Run a stubbed standalone YOLOX demo that simulates inference and prints results.
-
-```bash
-python3 yolox_demo.py --image /path/to/image.jpg --num 5 --seed 42 --json --save ./outputs/yolox_demo.json
-```
-
-Arguments:
-- `--image`: Optional path to an image. If provided, existence is validated.
-- `--num`: Number of fake detections to generate (default 3).
-- `--seed`: Optional seed for deterministic demo outputs.
-- `--json`: Print results as JSON (otherwise human-readable text).
-- `--save`: Optional path to save JSON results to disk.
-
-### Two-image comparison mode
-
-Compare two images of the same room and see detected differences using IoU matching:
-
-```bash
-python3 yolox_demo.py --image-a /path/room_before.jpg --image-b /path/room_after.jpg --num 8 --iou 0.5 --json --save ./outputs/yolox_compare.json --save-viz ./outputs/yolox_compare_viz.jpg
-```
-
-Arguments:
-- `--image-a` / `--image-b`: Paths to the two images.
-- `--iou`: IoU threshold for matching boxes (default 0.5).
-- `--save-viz`: Save a final annotated image (green=added in B, red=removed from A, yellow=class changed among matches). Requires Pillow (`pip install pillow`).
-
-### Pixel-diff comparison (less random, more deterministic)
-
-Use a simple pixel-difference heuristic instead of random detections:
-
-```bash
-python3 yolox_demo.py --image-a before.jpg --image-b after.jpg --pixel-diff --min-area 300 --blur 2.5 --added-thresh 25 --removed-thresh 25 --save-viz ./outputs/yolox_compare_viz.jpg --json --save ./outputs/yolox_compare.json
-```
-
-Flags:
-- `--pixel-diff`: Enable pixel-based difference detection.
-- `--min-area`: Minimum connected-component area to keep (filters noise).
-- `--blur`: Gaussian blur radius before differencing (smooths noise).
-- `--added-thresh` / `--removed-thresh`: Intensity thresholds for added/removed masks.
+- **Real Detection**: Uses actual pretrained weights, not fake results
+- **Accurate Bounding Boxes**: Fixed coordinate conversion issues
+- **Comprehensive Analysis**: Category breakdown, confidence statistics
+- **Visual Output**: Color-coded detection visualizations
+- **JSON Export**: Structured detection data

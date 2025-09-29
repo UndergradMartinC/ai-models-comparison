@@ -1,6 +1,7 @@
 import time
 import warnings
-from object_detection import comprehensive_detection, yolox_only, dino_only
+from yolox_detector import yolox_only
+from grounding_dino import dino_only
 from rfdetr import rfdetr
 from yolonas import yolonas
 
@@ -33,11 +34,13 @@ def main():
     timing_results['YOLOX'] = time_function(yolox_only, 'YOLOX')
     timing_results['YOLO-NAS'] = time_function(yolonas, 'YOLO-NAS')
     
-    # Run comprehensive comparison (not timed)
+    # Individual model analysis available
     print("\n" + "=" * 50)
-    print("🚀 RUNNING COMPREHENSIVE ANALYSIS")
+    print("🚀 INDIVIDUAL MODEL ANALYSIS")
     print("=" * 50)
-    comprehensive_detection()
+    print("Run standalone analysis:")
+    print("  python3 yolox_detector.py    - YOLOX only")
+    print("  python3 grounding_dino.py    - Grounding DINO only")
     
     # Print summary
     print("\n" + "=" * 50)

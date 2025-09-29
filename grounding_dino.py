@@ -317,7 +317,7 @@ class GroundingDINODetector:
         return json_path, vis_path
 
 
-def dino_only(image1_path: str = "spill-on-kitchen-tile-260nw-724087510.jpg", image2_path: str = "spill-on-kitchen-tile-260nw-724087510.jpg"):
+def dino_only(image1_path: str = "IMG_1464.jpg", image2_path: str = "IMG_1465.jpg"):
     """Grounding DINO-only detection for timing comparison"""
     print("Running Grounding DINO-only detection...")
     
@@ -334,7 +334,7 @@ def dino_only(image1_path: str = "spill-on-kitchen-tile-260nw-724087510.jpg", im
     return f"Grounding DINO completed - {total_objects} objects detected"
 
 
-def comprehensive_dino_analysis(image1_path: str = "spill-on-kitchen-tile-260nw-724087510.jpg", image2_path: str = "spill-on-kitchen-tile-260nw-724087510.jpg"):
+def comprehensive_dino_analysis(image1_path: str = "IMG_1464.jpg", image2_path: str = "IMG_1465.jpg"):
     """Comprehensive Grounding DINO analysis and comparison"""
     print("=" * 60)
     print("🎯 GROUNDING DINO COMPREHENSIVE ANALYSIS")

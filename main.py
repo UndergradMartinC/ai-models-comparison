@@ -1,7 +1,6 @@
 import time
 from dino import dino
 from rfdetr import rfdetr
-from yolox import yolox
 from yolonas import yolonas
 
 def time_function(func, name):
@@ -26,8 +25,6 @@ def main():
     # Time each function
     timing_results['DINO'] = time_function(dino, 'DINO')
     timing_results['RF-DETR'] = time_function(rfdetr, 'RF-DETR')
-    timing_results['YOLOX'] = time_function(yolox, 'YOLOX')
-    timing_results['YOLO-NAS'] = time_function(yolonas, 'YOLO-NAS')
     
     # Print summary
     print("\n" + "=" * 50)

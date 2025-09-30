@@ -23,7 +23,6 @@ def main():
     timing_results = {}
     
     # Time each function
-    timing_results['DINO'] = time_function(dino, 'DINO')
     timing_results['RF-DETR'] = time_function(rfdetr, 'RF-DETR')
     
     # Print summary

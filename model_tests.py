@@ -76,7 +76,6 @@ class Object:
         self.sensitivity = 0
         self.specificity = 0
         self.f1_score = 0
-        self.average_precision = 0
 
     def set_precision(self, precision):
         self.precision = precision
@@ -86,8 +85,6 @@ class Object:
         self.specificity = specificity
     def set_f1_score(self, f1_score):
         self.f1_score = f1_score
-    def set_average_precision(self, average_precision):
-        self.average_precision = average_precision
 
 
 class ConfusionMatrix:
@@ -129,23 +126,29 @@ class ConfusionMatrix:
     def get_f1_score(self, precision, sensitivity):
         return 2 * precision * sensitivity / (precision + sensitivity)
 
-    def get_average_precision(self, precision):
-        #intgrate precision function
-        return sympy.integrate(precision, 0, 1)
 
-    def get_mean_average_precision(self, json_array):
+    def finish_class_metrics(self):
+        for item in self.object_array:
+            class_name = item.class_name
+            self.set_class_metrics(class_name)
+        
+        self.set_mean_average_precision()
+        self.set_mean_f1_score()
+        
+
+    def get_mean_average_precision(self):
         mean_average_precision = 0
-        for item in json_array:
-            mean_average_precision += self.get_average_precision(item['precision'])
-        return mean_average_precision / len(json_array)
+        for item in self.object_array:
+            mean_average_precision += item.precision
+        return mean_average_precision / len(self.object_array)
 
     def set_class_metrics(self, class_name):
-        int true_positives = 0
-        int false_positives = 0
-        int false_negatives = 0
-        int true_negatives = 0
+        true_positives = 0
+        false_positives = 0
+        false_negatives = 0
+        true_negatives = 0
 
-        int class_index = self.get_class_index(class_name)
+        class_index = self.get_class_index(class_name)
 
         for i in range(self.confusion_matrix.length):
             for j in range(self.confusion_matrix.length):
@@ -162,14 +165,13 @@ class ConfusionMatrix:
         self.object_array[class_index].set_sensitivity(self.get_sensitivity(true_positives, false_negatives))
         self.object_array[class_index].set_specificity(self.get_specificity(true_negatives, false_positives)) 
         self.object_array[class_index].set_f1_score(self.get_f1_score(self.object_array[class_index].precision, self.object_array[class_index].sensitivity))
-        self.object_array[class_index].set_average_precision(self.get_average_precision(self.object_array[class_index].precision))
 
         return self.object_array[class_index].precision, self.object_array[class_index].sensitivity, self.object_array[class_index].specificity, self.object_array[class_index].f1_score, self.object_array[class_index].average_precision
 
     def increment_cell(self, for_class, to_class):
         self.confusion_matrix[self.get_class_index(for_class)][self.get_class_index(to_class)] += 1
 
-    def get_mean_average_precision(self):
+    def set_mean_average_precision(self):
         mean_average_precision = 0
         for item in self.object_array:
             mean_average_precision += item.precision
@@ -177,7 +179,7 @@ class ConfusionMatrix:
         self.mean_average_precision = mean_average_precision / len(self.object_array)
         return mean_average_precision / len(self.object_array)
 
-    def get_mean_f1_score(self):
+    def set_mean_f1_score(self):
         mean_f1_score = 0
         for item in self.object_array:
             mean_f1_score += item.f1_score

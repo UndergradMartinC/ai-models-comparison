@@ -1,7 +1,6 @@
 import json
 from COCO_CLASSES import INDOOR_BUSINESS_CLASSES
 import numpy as np
-import sympy
 
 '''
 This script contains the functions to test the each model against the ground truth data. The class ConfusionMatrix 

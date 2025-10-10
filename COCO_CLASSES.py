@@ -1,41 +1,41 @@
 INDOOR_BUSINESS_CLASSES = {
-    0: "person",           # People in the space
-    24: "backpack",        # Luggage/personal items
-    26: "handbag",         # Personal bags
-    27: "tie",             # Professional attire
-    28: "suitcase",        # Travel luggage (Airbnb guests)
-    39: "bottle",          # Water bottles, beverages
-    40: "wine glass",      # Dining/entertainment
-    41: "cup",             # Coffee cups, mugs
-    42: "fork",            # Dining utensils
-    43: "knife",           # Kitchen utensils
-    44: "spoon",           # Dining utensils
-    45: "bowl",            # Dishes
-    46: "banana",          # Food items
-    47: "apple",           # Food items
-    48: "sandwich",        # Food items
-    56: "chair",           # Office/dining furniture
-    57: "couch",           # Lounge furniture
-    58: "potted plant",    # Decor/ambiance
-    59: "bed",             # Bedroom furniture
-    60: "dining table",    # Dining/meeting furniture
-    61: "toilet",          # Bathroom fixtures
-    62: "tv",              # Entertainment/presentation
-    63: "laptop",          # Work equipment
-    64: "mouse",           # Computer peripherals
-    65: "remote",          # TV/AC controls
-    66: "keyboard",        # Computer equipment
-    67: "cell phone",      # Personal devices
-    68: "microwave",       # Kitchen appliances
-    69: "oven",            # Kitchen appliances
-    70: "toaster",         # Kitchen appliances
-    71: "sink",            # Kitchen/bathroom fixtures
-    72: "refrigerator",    # Kitchen appliances
-    73: "book",            # Reading materials/decor
-    74: "clock",           # Time displays
-    75: "vase",            # Decorative items
-    76: "scissors",        # Office supplies
-    77: "teddy bear",      # Comfort items (hotels)
-    78: "hair drier",      # Bathroom amenities
-    79: "toothbrush"       # Personal hygiene items
+    "person",           # People in the space
+    "backpack",        # Luggage/personal items
+    "handbag",         # Personal bags
+    "tie",             # Professional attire
+    "suitcase",        # Travel luggage (Airbnb guests)
+    "bottle",          # Water bottles, beverages
+    "wine glass",      # Dining/entertainment
+    "cup",             # Coffee cups, mugs
+    "fork",            # Dining utensils
+    "knife",           # Kitchen utensils
+    "spoon",           # Dining utensils
+    "bowl",            # Dishes
+    "banana",          # Food items
+    "apple",           # Food items
+    "sandwich",        # Food items
+    "chair",           # Office/dining furniture
+    "couch",           # Lounge furniture
+    "potted plant",    # Decor/ambiance
+    "bed",             # Bedroom furniture
+    "dining table",    # Dining/meeting furniture
+    "toilet",          # Bathroom fixtures
+    "tv",              # Entertainment/presentation
+    "laptop",          # Work equipment
+    "mouse",           # Computer peripherals
+    "remote",          # TV/AC controls
+    "keyboard",        # Computer equipment
+    "cell phone",      # Personal devices
+    "microwave",       # Kitchen appliances
+    "oven",            # Kitchen appliances
+    "toaster",         # Kitchen appliances
+    "sink",            # Kitchen/bathroom fixtures
+    "refrigerator",    # Kitchen appliances
+    "book",            # Reading materials/decor
+    "clock",           # Time displays
+    "vase",            # Decorative items
+    "scissors",        # Office supplies
+    "teddy bear",      # Comfort items (hotels)
+    "hair drier",      # Bathroom amenities
+    "toothbrush"       # Personal hygiene items
 }

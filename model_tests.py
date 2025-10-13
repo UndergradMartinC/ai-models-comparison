@@ -1,5 +1,5 @@
 import json
-from COCO_CLASSES import INDOOR_BUSINESS_CLASSES
+from COCO_CLASSES import INDOOR_BUSINESS_CLASSES, IOU_THRESHOLD, AREA_THRESHOLD
 import numpy as np
 
 '''
@@ -9,8 +9,8 @@ for each class.
 '''
 
 
-IOU_THRESHOLD = 0.5
-AREA_THRESHOLD = 0.5
+IOU_THRESHOLD = IOU_THRESHOLD
+AREA_THRESHOLD = AREA_THRESHOLD
 
 class Object:
 
@@ -61,7 +61,7 @@ class ConfusionMatrix:
 
     def make_class_metrics_array(self):
         class_metrics_array = []
-        for class_name in self.class_name_array:
+        for class_name in INDOOR_BUSINESS_CLASSES:
             class_metrics_array.append(ObjectMetrics(class_name))
         return class_metrics_array
 
@@ -79,6 +79,9 @@ class ConfusionMatrix:
         return self.confusion_matrix
 
     def get_class_index(self, class_name):
+        if class_name not in self.index_dict:
+            print(f"WARNING: Class '{class_name}' not found in index_dict. Available classes: {list(self.index_dict.keys())}")
+            return -1  # Return invalid index
         return self.index_dict[class_name]
 
     def get_accuracy(self, true_positives, false_positives, false_negatives, true_negatives):
@@ -98,8 +101,8 @@ class ConfusionMatrix:
 
 
     def get_matrix_metrics(self):
-        for item in self.reference_object_array:
-            class_name = item.class_name
+        # Calculate metrics for all classes in INDOOR_BUSINESS_CLASSES
+        for class_name in INDOOR_BUSINESS_CLASSES:
             self.set_class_metrics(class_name)
         
         self.set_mean_average_precision()
@@ -114,60 +117,92 @@ class ConfusionMatrix:
 
     def get_mean_average_precision(self):
         mean_average_precision = 0
-        for item in self.object_array:
+        for item in self.class_metrics_array:
             mean_average_precision += item.precision
-        return mean_average_precision / len(self.object_array)
+        return mean_average_precision / len(self.class_metrics_array)
 
     def set_class_metrics(self, class_name):
+        class_index = self.get_class_index(class_name)
+        
+        if class_index < 0:  # Skip invalid classes
+            return 0, 0, 0, 0
+            
         true_positives = 0
         false_positives = 0
         false_negatives = 0
         true_negatives = 0
 
-        class_index = self.get_class_index(class_name)
-
+        # In confusion matrix: rows = actual/true class, columns = predicted class
+        # For class at index class_index:
+        # - True Positives: matrix[class_index][class_index] 
+        # - False Negatives: sum of row class_index (excluding diagonal)
+        # - False Positives: sum of column class_index (excluding diagonal)
+        # - True Negatives: everything else
+        
         for i in range(len(self.confusion_matrix)):
             for j in range(len(self.confusion_matrix)):
                 if i == class_index and j == class_index:
                     true_positives += self.confusion_matrix[i][j]
-                elif i == class_index:
-                    false_positives += self.confusion_matrix[i][j]
-                elif j == class_index:
-                    false_negatives += self.confusion_matrix[i][j]
+                elif i == class_index and j != class_index:
+                    false_negatives += self.confusion_matrix[i][j]  # True class was class_index, predicted something else
+                elif i != class_index and j == class_index:
+                    false_positives += self.confusion_matrix[i][j]  # True class was something else, predicted class_index
                 else:
                     true_negatives += self.confusion_matrix[i][j]
             
-        for object in self.unmatched_objects:
-            if object.class_name == class_name:
+        # Add unmatched objects (false positives for detected class)
+        for obj in self.unmatched_objects:
+            if obj.class_name == class_name:
                 false_positives += 1
             else:
                 true_negatives += 1
+        
+        print(f"    Class '{class_name}': TP={true_positives}, FP={false_positives}, FN={false_negatives}, TN={true_negatives}")
+        
+        # Calculate metrics with division by zero protection
+        precision = self.get_precision(true_positives, false_positives) if (true_positives + false_positives) > 0 else 0
+        sensitivity = self.get_sensitivity(true_positives, false_negatives) if (true_positives + false_negatives) > 0 else 0
+        specificity = self.get_specificity(true_negatives, false_positives) if (true_negatives + false_positives) > 0 else 0
+        f1_score = self.get_f1_score(precision, sensitivity) if (precision + sensitivity) > 0 else 0
 
-        self.object_array[class_index].set_precision(self.get_precision(true_positives, false_positives))
-        self.object_array[class_index].set_sensitivity(self.get_sensitivity(true_positives, false_negatives))
-        self.object_array[class_index].set_specificity(self.get_specificity(true_negatives, false_positives)) 
-        self.object_array[class_index].set_f1_score(self.get_f1_score(self.object_array[class_index].precision, self.object_array[class_index].sensitivity))
+        self.class_metrics_array[class_index].set_precision(precision)
+        self.class_metrics_array[class_index].set_sensitivity(sensitivity)
+        self.class_metrics_array[class_index].set_specificity(specificity)
+        self.class_metrics_array[class_index].set_f1_score(f1_score)
 
-        return self.object_array[class_index].precision, self.object_array[class_index].sensitivity, self.object_array[class_index].specificity, self.object_array[class_index].f1_score
+        return precision, sensitivity, specificity, f1_score
 
     def increment_cell(self, reference_class, object_class):
-        self.confusion_matrix[self.get_class_index(reference_class)][self.get_class_index(object_class)] += 1
+        ref_idx = self.get_class_index(reference_class)
+        obj_idx = self.get_class_index(object_class)
+        
+        if ref_idx >= 0 and obj_idx >= 0:
+            self.confusion_matrix[ref_idx][obj_idx] += 1
+            print(f"    Incremented confusion matrix at [{ref_idx}][{obj_idx}] for {reference_class} -> {object_class}")
+        else:
+            print(f"    Skipped increment due to invalid class indices: {reference_class}({ref_idx}) -> {object_class}({obj_idx})")
 
     def set_mean_average_precision(self):
         mean_average_precision = 0
-        for item in self.object_array:
-            mean_average_precision += item.precision
+        num_classes = 0
+        for item in self.class_metrics_array:
+            if item.precision > 0:
+                mean_average_precision += item.precision
+                num_classes += 1
             
-        self.mean_average_precision = mean_average_precision / len(self.object_array)
-        return mean_average_precision / len(self.object_array)
+        self.mean_average_precision = mean_average_precision / num_classes
+        return mean_average_precision / len(self.class_metrics_array)
 
     def set_mean_f1_score(self):
         mean_f1_score = 0
-        for item in self.object_array:
-            mean_f1_score += item.f1_score
+        num_classes = 0
+        for item in self.class_metrics_array:
+            if item.f1_score > 0:
+                mean_f1_score += item.f1_score
+                num_classes += 1
         
-        self.mean_f1_score = mean_f1_score / len(self.object_array)
-        return mean_f1_score / len(self.object_array)
+        self.mean_f1_score = mean_f1_score / num_classes
+        return mean_f1_score / len(self.class_metrics_array)
 
     def area_is_similar(self, object, reference_object):
         """
@@ -215,15 +250,21 @@ class ConfusionMatrix:
         Compare ground truth and model predictions
         """
         for reference_object in self.reference_object_array:
-            if (self.calculate_iou(object.bbox, reference_object.bbox) > IOU_THRESHOLD and self.area_is_similar(object, reference_object)):
-                self.increment_cell(reference_object.class_name, object.class_name)
-                return True
-        return False
+            if (self.calculate_iou(object.bbox, reference_object.bbox) > IOU_THRESHOLD): #and self.area_is_similar(object, reference_object)):
+                return True, reference_object
+        return False, None
 
-    def handle_object_data(self, class_name, bbox, predicted_class_name):
+    def handle_object_data(self, class_name, bbox):
         detected_object = Object(class_name, bbox)
-        if self.is_object_present(detected_object, self.reference_object_array):
-            self.increment_cell(detected_object.class_name, predicted_class_name)
+        
+        has_match, reference_object = self.is_object_present(detected_object)
+
+        
+        if has_match:
+            self.increment_cell(reference_object.class_name, detected_object.class_name)
+            #self.reference_object_array.remove(reference_object)
         else:
             self.unmatched_objects.append(detected_object)
+
+        return reference_object
 

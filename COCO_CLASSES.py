@@ -1,4 +1,4 @@
-INDOOR_BUSINESS_CLASSES = {
+INDOOR_BUSINESS_CLASSES = [
     "person",           # People in the space
     "backpack",        # Luggage/personal items
     "handbag",         # Personal bags
@@ -38,6 +38,6 @@ INDOOR_BUSINESS_CLASSES = {
     "teddy bear",      # Comfort items (hotels)
     "hair drier",      # Bathroom amenities
     "toothbrush"       # Personal hygiene items
-}
+]
 
 CONFIDENCE_THRESHOLD = 0.5

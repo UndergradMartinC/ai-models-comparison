@@ -61,7 +61,7 @@ class ConfusionMatrix:
 
     def make_class_metrics_array(self):
         class_metrics_array = []
-        for class_name in self.class_name_array:
+        for class_name in INDOOR_BUSINESS_CLASSES:
             class_metrics_array.append(ObjectMetrics(class_name))
         return class_metrics_array
 
@@ -114,9 +114,9 @@ class ConfusionMatrix:
 
     def get_mean_average_precision(self):
         mean_average_precision = 0
-        for item in self.object_array:
+        for item in self.class_metrics_array:
             mean_average_precision += item.precision
-        return mean_average_precision / len(self.object_array)
+        return mean_average_precision / len(self.class_metrics_array)
 
     def set_class_metrics(self, class_name):
         true_positives = 0
@@ -143,31 +143,31 @@ class ConfusionMatrix:
             else:
                 true_negatives += 1
 
-        self.object_array[class_index].set_precision(self.get_precision(true_positives, false_positives))
-        self.object_array[class_index].set_sensitivity(self.get_sensitivity(true_positives, false_negatives))
-        self.object_array[class_index].set_specificity(self.get_specificity(true_negatives, false_positives)) 
-        self.object_array[class_index].set_f1_score(self.get_f1_score(self.object_array[class_index].precision, self.object_array[class_index].sensitivity))
+        self.class_metrics_array[class_index].set_precision(self.get_precision(true_positives, false_positives))
+        self.class_metrics_array[class_index].set_sensitivity(self.get_sensitivity(true_positives, false_negatives))
+        self.class_metrics_array[class_index].set_specificity(self.get_specificity(true_negatives, false_positives)) 
+        self.class_metrics_array[class_index].set_f1_score(self.get_f1_score(self.class_metrics_array[class_index].precision, self.class_metrics_array[class_index].sensitivity))
 
-        return self.object_array[class_index].precision, self.object_array[class_index].sensitivity, self.object_array[class_index].specificity, self.object_array[class_index].f1_score
+        return self.class_metrics_array[class_index].precision, self.class_metrics_array[class_index].sensitivity, self.class_metrics_array[class_index].specificity, self.class_metrics_array[class_index].f1_score
 
     def increment_cell(self, reference_class, object_class):
         self.confusion_matrix[self.get_class_index(reference_class)][self.get_class_index(object_class)] += 1
 
     def set_mean_average_precision(self):
         mean_average_precision = 0
-        for item in self.object_array:
+        for item in self.class_metrics_array:
             mean_average_precision += item.precision
             
-        self.mean_average_precision = mean_average_precision / len(self.object_array)
-        return mean_average_precision / len(self.object_array)
+        self.mean_average_precision = mean_average_precision / len(self.class_metrics_array)
+        return mean_average_precision / len(self.class_metrics_array)
 
     def set_mean_f1_score(self):
         mean_f1_score = 0
-        for item in self.object_array:
+        for item in self.class_metrics_array:
             mean_f1_score += item.f1_score
         
-        self.mean_f1_score = mean_f1_score / len(self.object_array)
-        return mean_f1_score / len(self.object_array)
+        self.mean_f1_score = mean_f1_score / len(self.class_metrics_array)
+        return mean_f1_score / len(self.class_metrics_array)
 
     def area_is_similar(self, object, reference_object):
         """
@@ -222,7 +222,7 @@ class ConfusionMatrix:
 
     def handle_object_data(self, class_name, bbox, predicted_class_name):
         detected_object = Object(class_name, bbox)
-        if self.is_object_present(detected_object, self.reference_object_array):
+        if self.is_object_present(detected_object):
             self.increment_cell(detected_object.class_name, predicted_class_name)
         else:
             self.unmatched_objects.append(detected_object)

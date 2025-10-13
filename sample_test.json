@@ -1,6 +1,0 @@
-[
-  { "class": "person", "instances": 3 },
-  { "class": "car", "instances": 5 },
-  { "class": "bicycle", "instances": 2 },
-  { "class": "dog", "instances": 1 }
-]

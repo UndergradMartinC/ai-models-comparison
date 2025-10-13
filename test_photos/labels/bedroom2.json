@@ -1,0 +1,17 @@
+{
+  "image": "bedroom2.jpeg",
+  "objects": [
+    {
+      "id": "obj1",
+      "class": "bed",
+      "top_left_coords": [
+        430,
+        166
+      ],
+      "bottom_right_coords": [
+        638,
+        419
+      ]
+    }
+  ]
+}

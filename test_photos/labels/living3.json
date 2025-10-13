@@ -1,0 +1,89 @@
+{
+  "image": "living3.jpg",
+  "objects": [
+    {
+      "id": "obj1",
+      "class": "chair",
+      "top_left_coords": [
+        410,
+        190
+      ],
+      "bottom_right_coords": [
+        508,
+        322
+      ]
+    },
+    {
+      "id": "obj2",
+      "class": "chair",
+      "top_left_coords": [
+        480,
+        230
+      ],
+      "bottom_right_coords": [
+        639,
+        444
+      ]
+    },
+    {
+      "id": "obj3",
+      "class": "tv",
+      "top_left_coords": [
+        478,
+        26
+      ],
+      "bottom_right_coords": [
+        619,
+        179
+      ]
+    },
+    {
+      "id": "obj4",
+      "class": "couch",
+      "top_left_coords": [
+        0,
+        188
+      ],
+      "bottom_right_coords": [
+        252,
+        479
+      ]
+    },
+    {
+      "id": "obj5",
+      "class": "potted plant",
+      "top_left_coords": [
+        172,
+        103
+      ],
+      "bottom_right_coords": [
+        223,
+        212
+      ]
+    },
+    {
+      "id": "obj6",
+      "class": "potted plant",
+      "top_left_coords": [
+        209,
+        161
+      ],
+      "bottom_right_coords": [
+        252,
+        231
+      ]
+    },
+    {
+      "id": "obj7",
+      "class": "dining table",
+      "top_left_coords": [
+        225,
+        252
+      ],
+      "bottom_right_coords": [
+        315,
+        409
+      ]
+    }
+  ]
+}

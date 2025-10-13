@@ -1,0 +1,113 @@
+{
+  "image": "living1.jpg",
+  "objects": [
+    {
+      "id": "obj1",
+      "class": "couch",
+      "top_left_coords": [
+        360,
+        185
+      ],
+      "bottom_right_coords": [
+        566,
+        280
+      ]
+    },
+    {
+      "id": "obj2",
+      "class": "chair",
+      "top_left_coords": [
+        231,
+        181
+      ],
+      "bottom_right_coords": [
+        283,
+        233
+      ]
+    },
+    {
+      "id": "obj3",
+      "class": "chair",
+      "top_left_coords": [
+        291,
+        179
+      ],
+      "bottom_right_coords": [
+        329,
+        224
+      ]
+    },
+    {
+      "id": "obj4",
+      "class": "chair",
+      "top_left_coords": [
+        31,
+        233
+      ],
+      "bottom_right_coords": [
+        115,
+        345
+      ]
+    },
+    {
+      "id": "obj5",
+      "class": "chair",
+      "top_left_coords": [
+        53,
+        228
+      ],
+      "bottom_right_coords": [
+        121,
+        319
+      ]
+    },
+    {
+      "id": "obj6",
+      "class": "chair",
+      "top_left_coords": [
+        84,
+        215
+      ],
+      "bottom_right_coords": [
+        132,
+        302
+      ]
+    },
+    {
+      "id": "obj7",
+      "class": "chair",
+      "top_left_coords": [
+        0,
+        313
+      ],
+      "bottom_right_coords": [
+        51,
+        414
+      ]
+    },
+    {
+      "id": "obj8",
+      "class": "potted plant",
+      "top_left_coords": [
+        602,
+        168
+      ],
+      "bottom_right_coords": [
+        639,
+        241
+      ]
+    },
+    {
+      "id": "obj9",
+      "class": "dining table",
+      "top_left_coords": [
+        162,
+        202
+      ],
+      "bottom_right_coords": [
+        190,
+        256
+      ]
+    }
+  ]
+}

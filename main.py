@@ -1,7 +1,8 @@
 import time
-from dino import dino
+#from dino import dino
 from rfdetr import rfdetr
 from yolonas import yolonas
+import os
 
 def time_function(func, name):
     """Time the execution of a function"""
@@ -14,8 +15,12 @@ def time_function(func, name):
     print(f"Result: {result}")
     return execution_time
 
+def test_rfdetr(photo_name, use_gpu=False):
+    """Test the model across all photos in the test_photos directory"""
+    rfdetr(f'test_photos/images/{photo_name}', f'test_photos/labels/{photo_name.replace(".jpeg", ".json")}', use_gpu=use_gpu)
+
 def main():
-    """Main function to run and time all AI models"""
+    """Main function to run and time all AI models
     print("AI Models Comparison - Timing Analysis")
     print("=" * 50)
     
@@ -38,6 +43,9 @@ def main():
     
     print(f"\nFastest: {sorted_results[0][0]} ({sorted_results[0][1]:.4f}s)")
     print(f"Slowest: {sorted_results[-1][0]} ({sorted_results[-1][1]:.4f}s)")
+    """
+
+    test_rfdetr("dense1.jpeg", use_gpu=False)
 
 if __name__ == "__main__":
     main()

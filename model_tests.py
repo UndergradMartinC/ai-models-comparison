@@ -1,5 +1,5 @@
 import json
-from COCO_CLASSES import INDOOR_BUSINESS_CLASSES
+from COCO_CLASSES import INDOOR_BUSINESS_CLASSES, IOU_THRESHOLD, AREA_THRESHOLD
 import numpy as np
 
 '''
@@ -9,8 +9,8 @@ for each class.
 '''
 
 
-IOU_THRESHOLD = 0.5
-AREA_THRESHOLD = 0.5
+IOU_THRESHOLD = IOU_THRESHOLD
+AREA_THRESHOLD = AREA_THRESHOLD
 
 class Object:
 
@@ -184,18 +184,24 @@ class ConfusionMatrix:
 
     def set_mean_average_precision(self):
         mean_average_precision = 0
+        num_classes = 0
         for item in self.class_metrics_array:
-            mean_average_precision += item.precision
+            if item.precision > 0:
+                mean_average_precision += item.precision
+                num_classes += 1
             
-        self.mean_average_precision = mean_average_precision / len(self.class_metrics_array)
+        self.mean_average_precision = mean_average_precision / num_classes
         return mean_average_precision / len(self.class_metrics_array)
 
     def set_mean_f1_score(self):
         mean_f1_score = 0
+        num_classes = 0
         for item in self.class_metrics_array:
-            mean_f1_score += item.f1_score
+            if item.f1_score > 0:
+                mean_f1_score += item.f1_score
+                num_classes += 1
         
-        self.mean_f1_score = mean_f1_score / len(self.class_metrics_array)
+        self.mean_f1_score = mean_f1_score / num_classes
         return mean_f1_score / len(self.class_metrics_array)
 
     def area_is_similar(self, object, reference_object):
@@ -244,7 +250,7 @@ class ConfusionMatrix:
         Compare ground truth and model predictions
         """
         for reference_object in self.reference_object_array:
-            if (self.calculate_iou(object.bbox, reference_object.bbox) > IOU_THRESHOLD and self.area_is_similar(object, reference_object)):
+            if (self.calculate_iou(object.bbox, reference_object.bbox) > IOU_THRESHOLD): #and self.area_is_similar(object, reference_object)):
                 return True, reference_object
         return False, None
 
@@ -256,7 +262,9 @@ class ConfusionMatrix:
         
         if has_match:
             self.increment_cell(reference_object.class_name, detected_object.class_name)
-            self.reference_object_array.remove(reference_object)
+            #self.reference_object_array.remove(reference_object)
         else:
             self.unmatched_objects.append(detected_object)
+
+        return reference_object
 

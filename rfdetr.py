@@ -7,6 +7,7 @@ import cv2                                                     # OpenCV for comp
 import numpy as np                                             # Numerical operations
 import matplotlib.pyplot as plt                                # Plotting and visualization
 import matplotlib.patches as patches                           # Drawing shapes on plots
+from COCO_CLASSES import INDOOR_BUSINESS_CLASSES
 
 def rfdetr(before_photo="before.jpg", after_photo="after.jpg", result_photo="rfdetr_result.jpg"):
     """
@@ -250,18 +251,7 @@ def compare_images(before_photo, after_photo, result_photo):
         # === CLASS NAME MAPPING ===
         # COCO dataset class names - FILTERED for indoor business/residential environments
         # Focus on objects commonly found in offices, hotels, Airbnb, and professional buildings
-        COCO_CLASSES = [
-            "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat",
-            "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
-            "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",
-            "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard", "sports ball",
-            "kite", "baseball bat", "baseball glove", "skateboard", "surfboard", "tennis racket",
-            "bottle", "wine glass", "cup", "fork", "knife", "spoon", "bowl", "banana", "apple",
-            "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake",
-            "chair", "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop",
-            "mouse", "remote", "keyboard", "cell phone", "microwave", "oven", "toaster", "sink",
-            "refrigerator", "book", "clock", "vase", "scissors", "teddy bear", "hair drier", "toothbrush"
-        ]
+        COCO_CLASSES = INDOOR_BUSINESS_CLASSES
         
         # Define indoor/business relevant classes (subset of COCO indices)
         # These are the object types we care about for professional buildings and rentals

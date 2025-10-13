@@ -39,3 +39,5 @@ INDOOR_BUSINESS_CLASSES = {
     "hair drier",      # Bathroom amenities
     "toothbrush"       # Personal hygiene items
 }
+
+CONFIDENCE_THRESHOLD = 0.5

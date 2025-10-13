@@ -2,277 +2,208 @@
   "image": "office1.jpeg",
   "objects": [
     {
-      "id": "obj1",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         218,
-        232
-      ],
-      "bottom_right_coords": [
+        232,
         374,
         383
       ]
     },
     {
-      "id": "obj2",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         381,
-        116
-      ],
-      "bottom_right_coords": [
+        116,
         413,
         165
       ]
     },
     {
-      "id": "obj3",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         372,
-        118
-      ],
-      "bottom_right_coords": [
+        118,
         380,
         169
       ]
     },
     {
-      "id": "obj4",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         362,
-        123
-      ],
-      "bottom_right_coords": [
+        123,
         369,
         173
       ]
     },
     {
-      "id": "obj5",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         264,
-        128
-      ],
-      "bottom_right_coords": [
+        128,
         275,
         167
       ]
     },
     {
-      "id": "obj6",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         278,
-        125
-      ],
-      "bottom_right_coords": [
+        125,
         285,
         164
       ]
     },
     {
-      "id": "obj7",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         287,
-        126
-      ],
-      "bottom_right_coords": [
+        126,
         297,
         162
       ]
     },
     {
-      "id": "obj8",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         332,
-        120
-      ],
-      "bottom_right_coords": [
+        120,
         339,
         164
       ]
     },
     {
-      "id": "obj9",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         339,
-        123
-      ],
-      "bottom_right_coords": [
+        123,
         346,
         165
       ]
     },
     {
-      "id": "obj10",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         347,
-        118
-      ],
-      "bottom_right_coords": [
+        118,
         357,
         164
       ]
     },
     {
-      "id": "obj11",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         322,
-        120
-      ],
-      "bottom_right_coords": [
+        120,
         333,
         164
       ]
     },
     {
-      "id": "obj12",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         297,
-        125
-      ],
-      "bottom_right_coords": [
+        125,
         305,
         163
       ]
     },
     {
-      "id": "obj13",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         305,
-        122
-      ],
-      "bottom_right_coords": [
+        122,
         311,
         163
       ]
     },
     {
-      "id": "obj14",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         310,
-        124
-      ],
-      "bottom_right_coords": [
+        124,
         317,
         165
       ]
     },
     {
-      "id": "obj15",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         317,
-        123
-      ],
-      "bottom_right_coords": [
+        123,
         323,
         166
       ]
     },
     {
-      "id": "obj16",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         369,
-        22
-      ],
-      "bottom_right_coords": [
+        22,
         470,
         59
       ]
     },
     {
-      "id": "obj17",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         373,
-        7
-      ],
-      "bottom_right_coords": [
+        7,
         474,
         46
       ]
     },
     {
-      "id": "obj18",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         254,
-        43
-      ],
-      "bottom_right_coords": [
+        43,
         298,
         76
       ]
     },
     {
-      "id": "obj19",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         499,
-        0
-      ],
-      "bottom_right_coords": [
+        0,
         528,
         61
       ]
     },
     {
-      "id": "obj20",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         517,
-        0
-      ],
-      "bottom_right_coords": [
+        0,
         556,
         56
       ]
     },
     {
-      "id": "obj21",
       "class": "book",
-      "top_left_coords": [
+      "bbox": [
         539,
-        0
-      ],
-      "bottom_right_coords": [
+        0,
         581,
         56
       ]
     },
     {
-      "id": "obj22",
       "class": "bowl",
-      "top_left_coords": [
+      "bbox": [
         280,
-        94
-      ],
-      "bottom_right_coords": [
+        94,
         353,
         115
       ]
     },
     {
-      "id": "obj23",
       "class": "bowl",
-      "top_left_coords": [
+      "bbox": [
         464,
-        253
-      ],
-      "bottom_right_coords": [
+        253,
         554,
         287
       ]

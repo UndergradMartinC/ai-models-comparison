@@ -4,15 +4,11 @@ COCO Bounding Box Annotator & JSON Exporter
 What this script does
 ---------------------
 • Lets you draw bounding boxes on your own images (click + drag) and assign a COCO class to each box.
-• Saves annotations per-image as VALID JSON by default:
-  {
-    "image": "<filename>",
-    "objects": [
-      {"id": "obj1", "class": "person", "top_left_coords": [x0, y0], "bottom_right_coords": [x1, y1]},
-      ...
-    ]
-  }
-• Optionally also emits an additional file in your requested (but not strictly JSON-valid) style if you flip NONSTANDARD_FORMAT=True.
+• Saves annotations per-image as VALID JSON with format:
+  [
+    { "class": "person", "bbox": [x0, y0, x1, y1] },
+    { "class": "chair", "bbox": [x0, y0, x1, y1] }
+  ]
 
 How to use
 ----------
@@ -53,14 +49,13 @@ import cv2
 # ============================
 # Configuration
 # ============================
-NONSTANDARD_FORMAT = False  # If True, also write an extra file following the user's exact (non-JSON) example style
 BOX_COLOR = (0, 255, 0)
 BOX_THICKNESS = 2
 ACTIVE_BOX_COLOR = (0, 200, 255)
 
 # Official COCO-2017 80-class list in order (id == index)
 COCO_CLASSES = [
-    "person",           # People in the space
+    "person",          # People in the space
     "backpack",        # Luggage/personal items
     "handbag",         # Personal bags
     "tie",             # Professional attire
@@ -105,30 +100,16 @@ COCO_CLASSES = [
 # Data structures
 # ============================
 class Annotation:
-    def __init__(self, cls_name: str, tl: Tuple[int, int], br: Tuple[int, int], idx: int):
+    def __init__(self, cls_name: str, tl: Tuple[int, int], br: Tuple[int, int]):
         self.cls_name = cls_name
         self.tl = tl
         self.br = br
-        self.idx = idx  # sequential per-image (1-based)
 
-    def as_valid_json(self) -> Dict:
+    def as_json(self) -> Dict:
         return {
-            "id": f"obj{self.idx}",
             "class": self.cls_name,
-            "top_left_coords": [int(self.tl[0]), int(self.tl[1])],
-            "bottom_right_coords": [int(self.br[0]), int(self.br[1])],
+            "bbox": [int(self.tl[0]), int(self.tl[1]), int(self.br[0]), int(self.br[1])]
         }
-
-    def as_nonstandard_text(self) -> str:
-        # Produces the user's provided (not strictly JSON) style block
-        return (
-            f"{{obj{self.idx}\n"
-            f"     {{\n"
-            f"     \"class\":\"{self.cls_name}\",\"top_left_coords\":({int(self.tl[0])},{int(self.tl[1])}),"
-            f"\"bottom_right_coords\":({int(self.br[0])},{int(self.br[1])})\n"
-            f"     }}\n"
-            f"}}"
-        )
 
 # ============================
 # Utility functions
@@ -153,7 +134,6 @@ def class_from_user(raw: str) -> str:
         else:
             print(f"[!] Class id {idx} out of range 0..{len(COCO_CLASSES)-1}. Try again.")
             return ""
-    # try name lookup (case-insensitive)
     lower = raw.lower()
     for i, name in enumerate(COCO_CLASSES):
         if name.lower() == lower:
@@ -186,9 +166,7 @@ class ImageAnnotator:
         self._refresh()
 
     def _refresh(self):
-        # redraw all
         img = self.current_img.copy()
-        H, W = img.shape[:2]
         for a in self.annos[str(self.image_paths[self.idx])]:
             cv2.rectangle(img, a.tl, a.br, BOX_COLOR, BOX_THICKNESS)
             cv2.putText(img, a.cls_name, (a.tl[0], max(0, a.tl[1]-5)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, BOX_COLOR, 2)
@@ -202,65 +180,52 @@ class ImageAnnotator:
             self.start_pt = (x, y)
         elif event == cv2.EVENT_MOUSEMOVE and self.dragging:
             img = self.current_img.copy()
-            H, W = img.shape[:2]
-            x0, y0, x1, y1 = clamp_box(self.start_pt[0], self.start_pt[1], x, y, W, H)
+            x0, y0, x1, y1 = clamp_box(self.start_pt[0], self.start_pt[1], x, y, img.shape[1], img.shape[0])
             cv2.rectangle(img, (x0, y0), (x1, y1), ACTIVE_BOX_COLOR, BOX_THICKNESS)
             cv2.imshow(self.window, img)
         elif event == cv2.EVENT_LBUTTONUP and self.dragging:
             self.dragging = False
-            H, W = self.current_img.shape[:2]
-            x0, y0, x1, y1 = clamp_box(self.start_pt[0], self.start_pt[1], x, y, W, H)
+            x0, y0, x1, y1 = clamp_box(self.start_pt[0], self.start_pt[1], x, y, self.current_img.shape[1], self.current_img.shape[0])
             if abs(x1 - x0) < 2 or abs(y1 - y0) < 2:
                 self._refresh()
                 return
-            # Ask for class in terminal
             while True:
                 user = input("Enter COCO class id (0-79) or name for this box: ")
                 cls = class_from_user(user)
                 if cls:
                     break
-            # Save
-            idx_next = len(self.annos[str(self.image_paths[self.idx])]) + 1
-            self.annos[str(self.image_paths[self.idx])].append(Annotation(cls, (x0, y0), (x1, y1), idx_next))
+            self.annos[str(self.image_paths[self.idx])].append(Annotation(cls, (x0, y0), (x1, y1)))
             self._refresh()
 
     def _save_current(self):
         path = self.image_paths[self.idx]
         anns = self.annos[str(path)]
-        data = {
-            "image": path.name,
-            "objects": [a.as_valid_json() for a in anns]
-        }
+        data = [a.as_json() for a in anns]
         self.out_dir.mkdir(parents=True, exist_ok=True)
         json_path = self.out_dir / f"{path.stem}.json"
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
-        if NONSTANDARD_FORMAT:
-            txt_path = self.out_dir / f"{path.stem}_nonstandard.txt"
-            with open(txt_path, 'w', encoding='utf-8') as f:
-                for a in anns:
-                    f.write(a.as_nonstandard_text() + "\n")
         print(f"Saved: {json_path}")
 
     def run(self):
         self._load()
         while True:
             key = cv2.waitKey(0) & 0xFF
-            if key == ord('u'):  # undo
+            if key == ord('u'):
                 if self.annos[str(self.image_paths[self.idx])]:
                     self.annos[str(self.image_paths[self.idx])].pop()
                     print("Undid last box.")
                     self._refresh()
-            elif key == ord('s'):  # save
+            elif key == ord('s'):
                 self._save_current()
-            elif key == ord('n'):  # next
+            elif key == ord('n'):
                 self._save_current()
                 if self.idx < len(self.image_paths) - 1:
                     self.idx += 1
                     self._load()
                 else:
                     print("[End] No more images. Press q to quit or p to go back.")
-            elif key == ord('p'):  # prev
+            elif key == ord('p'):
                 self._save_current()
                 if self.idx > 0:
                     self.idx -= 1

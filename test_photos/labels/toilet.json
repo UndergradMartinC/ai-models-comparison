@@ -2,13 +2,10 @@
   "image": "toilet.jpg",
   "objects": [
     {
-      "id": "obj1",
       "class": "toilet",
-      "top_left_coords": [
+      "bbox": [
         117,
-        21
-      ],
-      "bottom_right_coords": [
+        21,
         560,
         479
       ]

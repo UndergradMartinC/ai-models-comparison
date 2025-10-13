@@ -2,61 +2,46 @@
   "image": "living2.jpg",
   "objects": [
     {
-      "id": "obj1",
       "class": "couch",
-      "top_left_coords": [
+      "bbox": [
         162,
-        226
-      ],
-      "bottom_right_coords": [
+        226,
         384,
         315
       ]
     },
     {
-      "id": "obj2",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         336,
-        312
-      ],
-      "bottom_right_coords": [
+        312,
         522,
         478
       ]
     },
     {
-      "id": "obj3",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         68,
-        283
-      ],
-      "bottom_right_coords": [
+        283,
         179,
         479
       ]
     },
     {
-      "id": "obj4",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         31,
-        258
-      ],
-      "bottom_right_coords": [
+        258,
         118,
         363
       ]
     },
     {
-      "id": "obj5",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         454,
-        244
-      ],
-      "bottom_right_coords": [
+        244,
         519,
         293
       ]

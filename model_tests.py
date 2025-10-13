@@ -265,7 +265,7 @@ class ConfusionMatrix:
         
         if has_match:
             self.increment_cell(reference_object.class_name, detected_object.class_name)
-            #self.reference_object_array.remove(reference_object)
+            self.reference_object_array.remove(reference_object)
         else:
             self.unmatched_objects.append(detected_object)
 

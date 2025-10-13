@@ -1,0 +1,17 @@
+{
+  "image": "toilet.jpg",
+  "objects": [
+    {
+      "id": "obj1",
+      "class": "toilet",
+      "top_left_coords": [
+        117,
+        21
+      ],
+      "bottom_right_coords": [
+        560,
+        479
+      ]
+    }
+  ]
+}

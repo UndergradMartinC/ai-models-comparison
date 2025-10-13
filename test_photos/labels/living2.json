@@ -1,0 +1,65 @@
+{
+  "image": "living2.jpg",
+  "objects": [
+    {
+      "id": "obj1",
+      "class": "couch",
+      "top_left_coords": [
+        162,
+        226
+      ],
+      "bottom_right_coords": [
+        384,
+        315
+      ]
+    },
+    {
+      "id": "obj2",
+      "class": "chair",
+      "top_left_coords": [
+        336,
+        312
+      ],
+      "bottom_right_coords": [
+        522,
+        478
+      ]
+    },
+    {
+      "id": "obj3",
+      "class": "chair",
+      "top_left_coords": [
+        68,
+        283
+      ],
+      "bottom_right_coords": [
+        179,
+        479
+      ]
+    },
+    {
+      "id": "obj4",
+      "class": "chair",
+      "top_left_coords": [
+        31,
+        258
+      ],
+      "bottom_right_coords": [
+        118,
+        363
+      ]
+    },
+    {
+      "id": "obj5",
+      "class": "chair",
+      "top_left_coords": [
+        454,
+        244
+      ],
+      "bottom_right_coords": [
+        519,
+        293
+      ]
+    }
+  ]
+}

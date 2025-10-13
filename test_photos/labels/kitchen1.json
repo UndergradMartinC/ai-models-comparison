@@ -1,0 +1,53 @@
+{
+  "image": "kitchen1.jpeg",
+  "objects": [
+    {
+      "id": "obj1",
+      "class": "oven",
+      "top_left_coords": [
+        89,
+        270
+      ],
+      "bottom_right_coords": [
+        205,
+        364
+      ]
+    },
+    {
+      "id": "obj2",
+      "class": "sink",
+      "top_left_coords": [
+        278,
+        236
+      ],
+      "bottom_right_coords": [
+        362,
+        295
+      ]
+    },
+    {
+      "id": "obj3",
+      "class": "knife",
+      "top_left_coords": [
+        77,
+        246
+      ],
+      "bottom_right_coords": [
+        124,
+        289
+      ]
+    },
+    {
+      "id": "obj4",
+      "class": "spoon",
+      "top_left_coords": [
+        218,
+        242
+      ],
+      "bottom_right_coords": [
+        250,
+        266
+      ]
+    }
+  ]
+}

@@ -2,97 +2,73 @@
   "image": "kitchen2.jpg",
   "objects": [
     {
-      "id": "obj1",
       "class": "sink",
-      "top_left_coords": [
+      "bbox": [
         49,
-        237
-      ],
-      "bottom_right_coords": [
+        237,
         244,
         384
       ]
     },
     {
-      "id": "obj2",
       "class": "potted plant",
-      "top_left_coords": [
+      "bbox": [
         320,
-        241
-      ],
-      "bottom_right_coords": [
+        241,
         411,
         367
       ]
     },
     {
-      "id": "obj3",
       "class": "potted plant",
-      "top_left_coords": [
+      "bbox": [
         515,
-        258
-      ],
-      "bottom_right_coords": [
+        258,
         566,
         323
       ]
     },
     {
-      "id": "obj4",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         399,
-        281
-      ],
-      "bottom_right_coords": [
+        281,
         528,
         475
       ]
     },
     {
-      "id": "obj5",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         525,
-        295
-      ],
-      "bottom_right_coords": [
+        295,
         638,
         477
       ]
     },
     {
-      "id": "obj6",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         483,
-        258
-      ],
-      "bottom_right_coords": [
+        258,
         529,
         309
       ]
     },
     {
-      "id": "obj7",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         572,
-        263
-      ],
-      "bottom_right_coords": [
+        263,
         639,
         317
       ]
     },
     {
-      "id": "obj8",
       "class": "couch",
-      "top_left_coords": [
+      "bbox": [
         265,
-        221
-      ],
-      "bottom_right_coords": [
+        221,
         378,
         321
       ]

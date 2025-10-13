@@ -2,109 +2,82 @@
   "image": "living1.jpg",
   "objects": [
     {
-      "id": "obj1",
       "class": "couch",
-      "top_left_coords": [
+      "bbox": [
         360,
-        185
-      ],
-      "bottom_right_coords": [
+        185,
         566,
         280
       ]
     },
     {
-      "id": "obj2",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         231,
-        181
-      ],
-      "bottom_right_coords": [
+        181,
         283,
         233
       ]
     },
     {
-      "id": "obj3",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         291,
-        179
-      ],
-      "bottom_right_coords": [
+        179,
         329,
         224
       ]
     },
     {
-      "id": "obj4",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         31,
-        233
-      ],
-      "bottom_right_coords": [
+        233,
         115,
         345
       ]
     },
     {
-      "id": "obj5",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         53,
-        228
-      ],
-      "bottom_right_coords": [
+        228,
         121,
         319
       ]
     },
     {
-      "id": "obj6",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         84,
-        215
-      ],
-      "bottom_right_coords": [
+        215,
         132,
         302
       ]
     },
     {
-      "id": "obj7",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         0,
-        313
-      ],
-      "bottom_right_coords": [
+        313,
         51,
         414
       ]
     },
     {
-      "id": "obj8",
       "class": "potted plant",
-      "top_left_coords": [
+      "bbox": [
         602,
-        168
-      ],
-      "bottom_right_coords": [
+        168,
         639,
         241
       ]
     },
     {
-      "id": "obj9",
       "class": "dining table",
-      "top_left_coords": [
+      "bbox": [
         162,
-        202
-      ],
-      "bottom_right_coords": [
+        202,
         190,
         256
       ]

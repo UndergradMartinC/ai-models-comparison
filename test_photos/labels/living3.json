@@ -2,85 +2,64 @@
   "image": "living3.jpg",
   "objects": [
     {
-      "id": "obj1",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         410,
-        190
-      ],
-      "bottom_right_coords": [
+        190,
         508,
         322
       ]
     },
     {
-      "id": "obj2",
       "class": "chair",
-      "top_left_coords": [
+      "bbox": [
         480,
-        230
-      ],
-      "bottom_right_coords": [
+        230,
         639,
         444
       ]
     },
     {
-      "id": "obj3",
       "class": "tv",
-      "top_left_coords": [
+      "bbox": [
         478,
-        26
-      ],
-      "bottom_right_coords": [
+        26,
         619,
         179
       ]
     },
     {
-      "id": "obj4",
       "class": "couch",
-      "top_left_coords": [
+      "bbox": [
         0,
-        188
-      ],
-      "bottom_right_coords": [
+        188,
         252,
         479
       ]
     },
     {
-      "id": "obj5",
       "class": "potted plant",
-      "top_left_coords": [
+      "bbox": [
         172,
-        103
-      ],
-      "bottom_right_coords": [
+        103,
         223,
         212
       ]
     },
     {
-      "id": "obj6",
       "class": "potted plant",
-      "top_left_coords": [
+      "bbox": [
         209,
-        161
-      ],
-      "bottom_right_coords": [
+        161,
         252,
         231
       ]
     },
     {
-      "id": "obj7",
       "class": "dining table",
-      "top_left_coords": [
+      "bbox": [
         225,
-        252
-      ],
-      "bottom_right_coords": [
+        252,
         315,
         409
       ]

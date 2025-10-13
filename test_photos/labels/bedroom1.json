@@ -2,25 +2,19 @@
   "image": "bedroom1.jpeg",
   "objects": [
     {
-      "id": "obj1",
       "class": "bed",
-      "top_left_coords": [
+      "bbox": [
         190,
-        240
-      ],
-      "bottom_right_coords": [
+        240,
         420,
         398
       ]
     },
     {
-      "id": "obj2",
       "class": "remote",
-      "top_left_coords": [
+      "bbox": [
         408,
-        289
-      ],
-      "bottom_right_coords": [
+        289,
         435,
         302
       ]

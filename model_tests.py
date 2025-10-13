@@ -111,7 +111,10 @@ class ConfusionMatrix:
         return self.class_metrics_array, self.mean_average_precision, self.mean_f1_score
 
 
-
+    def set_reference_json(self, reference_json):
+        self.reference_json = reference_json
+        self.reference_object_array = []
+        self.reference_object_array = self.make_object_array()
 
         
 

@@ -4,20 +4,13 @@ from rfdetr import rfdetr
 #from yolox import yolox
 import os
 
-def time_function(func, name):
-    """Time the execution of a function"""
-    print(f"\n--- Timing {name} ---")
-    start_time = time.time()
-    result = func()
-    end_time = time.time()
-    execution_time = end_time - start_time
-    print(f"{name} execution time: {execution_time:.4f} seconds")
-    print(f"Result: {result}")
-    return execution_time
-
 def test_rfdetr(photo_name, use_gpu=False):
     """Test the model across all photos in the test_photos directory"""
+    start_time = time.time()
     rfdetr(f'test_photos/images/{photo_name}', f'test_photos/labels/{photo_name.replace(".jpeg", ".json")}', use_gpu=use_gpu)
+    end_time = time.time()
+    execution_time = end_time - start_time
+    print(f"RF-DETR execution time: {execution_time:.4f} seconds")
 
 def main():
     """Main function to run and time all AI models

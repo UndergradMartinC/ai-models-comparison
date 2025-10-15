@@ -58,7 +58,7 @@ def rfdetr(image_path, reference_json_path, use_gpu=True, create_overlay=True):
     # Add overlay path to results
     if overlay_path:
         results['overlay_path'] = overlay_path
-        print(f"\n📸 Overlay visualization saved: {overlay_path}")
+        print(f"\n Overlay visualization saved: {overlay_path}")
     """
     print_results(results)
     

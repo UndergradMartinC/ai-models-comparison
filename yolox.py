@@ -375,7 +375,7 @@ class YOLOXDetector:
     def _load_model(self, model_path: str):
         """Load YOLOX model"""
         if not os.path.exists(model_path):
-            print(f"❌ YOLOX model file not found: {model_path}")
+            print(f"[ERROR] YOLOX model file not found: {model_path}")
             return
         
         try:
@@ -401,10 +401,10 @@ class YOLOXDetector:
             self.model.load_state_dict(new_state_dict, strict=False)
             self.model.to(self.device)
             self.model.eval()
-            print("✅ YOLOX loaded successfully!")
+            print("[OK] YOLOX loaded successfully!")
             
         except Exception as e:
-            print(f"❌ Failed to load YOLOX: {e}")
+            print(f"[ERROR] Failed to load YOLOX: {e}")
             self.model = None
     
     def preprocess_image(self, image: np.ndarray) -> Tuple[torch.Tensor, float]:
@@ -468,7 +468,7 @@ class YOLOXDetector:
             )
         except ImportError:
             # Fallback: use all detections if NMS is not available
-            print("⚠️  NMS not available, using all detections")
+            print("[WARNING]  NMS not available, using all detections")
             nms_out_index = torch.arange(outputs.shape[0])
         
         outputs = outputs[nms_out_index]
@@ -506,17 +506,17 @@ class YOLOXDetector:
     def detect_objects(self, image_path: str) -> List[Dict]:
         """Detect objects in an image using YOLOX"""
         if self.model is None:
-            print("❌ YOLOX model not loaded")
+            print("[ERROR] YOLOX model not loaded")
             return []
         
         if not os.path.exists(image_path):
-            print(f"❌ Image not found: {image_path}")
+            print(f"[ERROR] Image not found: {image_path}")
             return []
         
         # Load image
         image = cv2.imread(image_path)
         if image is None:
-            print(f"❌ Could not load image: {image_path}")
+            print(f"[ERROR] Could not load image: {image_path}")
             return []
         
         original_shape = image.shape[:2]
@@ -538,18 +538,18 @@ class YOLOXDetector:
                 with open(ground_truth_file, 'r') as f:
                     ground_truth = json.load(f)
                 matrix = ConfusionMatrix(ground_truth)
-                print(f"📊 Created confusion matrix from {ground_truth_file}")
+                print(f" Created confusion matrix from {ground_truth_file}")
             else:
-                print(f"⚠️ Ground truth file not found: {ground_truth_file}")
+                print(f"[WARNING] Ground truth file not found: {ground_truth_file}")
                 matrix = None
 
-            print(f"🔍 Running YOLOX on {image_path}")
+            print(f" Running YOLOX on {image_path}")
             input_tensor, ratio = self.preprocess_image(image)
 
             with torch.no_grad():
                 outputs = self.model(input_tensor)
                 detections = self.postprocess_detections(outputs, original_shape, ratio)
-                print(f"✅ YOLOX detected {len(detections)} objects")
+                print(f"[OK] YOLOX detected {len(detections)} objects")
 
                 # Handle each detection through confusion matrix
                 if matrix is not None:
@@ -561,7 +561,7 @@ class YOLOXDetector:
                 # Get matrix metrics
                 if matrix is not None:
                     class_metrics, mean_ap, mean_f1 = matrix.get_matrix_metrics()
-                    print(f"📈 Confusion Matrix Results: mAP={mean_ap:.3f}, mF1={mean_f1:.3f}")
+                    print(f" Confusion Matrix Results: mAP={mean_ap:.3f}, mF1={mean_f1:.3f}")
 
                     # Print per-class metrics for detected classes
                     detected_classes = set(d["object"] for d in detections)
@@ -577,19 +577,19 @@ class YOLOXDetector:
                 return detections
 
         except Exception as e:
-            print(f"❌ YOLOX failed: {e}")
+            print(f"[ERROR] YOLOX failed: {e}")
             return []
     
     def create_visualization(self, image_path: str, detections: List[Dict], save_path: str = None):
         """Create visualization of YOLOX detections"""
         if not os.path.exists(image_path):
-            print(f"❌ Image not found: {image_path}")
+            print(f"[ERROR] Image not found: {image_path}")
             return None
         
         # Load image
         image = cv2.imread(image_path)
         if image is None:
-            print(f"❌ Could not load image: {image_path}")
+            print(f"[ERROR] Could not load image: {image_path}")
             return None
         
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -626,7 +626,7 @@ class YOLOXDetector:
             cv2.rectangle(image_rgb, (x1, y1), (x2, y2), color, 3)
             
             # Draw label with YOLOX prefix
-            label = f"🔍 YOLOX: {obj} ({conf:.2f})"
+            label = f" YOLOX: {obj} ({conf:.2f})"
             font = cv2.FONT_HERSHEY_SIMPLEX
             font_scale = 0.6
             thickness = 2
@@ -650,20 +650,20 @@ class YOLOXDetector:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
             cv2.imwrite(save_path, image_bgr)
-            print(f"💾 YOLOX visualization saved: {save_path}")
+            print(f" YOLOX visualization saved: {save_path}")
         
         return image_rgb
 
     def create_comparison_visualization(self, image_path: str, detections: List[Dict], matrix: ConfusionMatrix, save_path: str = None):
         """Create visualization showing both model detections and ground truth annotations"""
         if not os.path.exists(image_path):
-            print(f"❌ Image not found: {image_path}")
+            print(f"[ERROR] Image not found: {image_path}")
             return None
 
         # Load image
         image = cv2.imread(image_path)
         if image is None:
-            print(f"❌ Could not load image: {image_path}")
+            print(f"[ERROR] Could not load image: {image_path}")
             return None
 
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -688,7 +688,7 @@ class YOLOXDetector:
             cv2.rectangle(image_rgb, (x1, y1), (x2, y2), colors["detection"], 2)
 
             # Draw label
-            label = f"🔍 {obj}: {conf:.2f}"
+            label = f" {obj}: {conf:.2f}"
             font = cv2.FONT_HERSHEY_SIMPLEX
             font_scale = 0.5
             thickness = 1
@@ -719,7 +719,7 @@ class YOLOXDetector:
             cv2.rectangle(image_rgb, (x1, y1), (x2, y2), colors["ground_truth"], 2)
 
             # Draw label
-            label = f"🎯 GT: {class_name}"
+            label = f" GT: {class_name}"
             font = cv2.FONT_HERSHEY_SIMPLEX
             font_scale = 0.5
             thickness = 1
@@ -750,7 +750,7 @@ class YOLOXDetector:
             cv2.rectangle(image_rgb, (x1, y1), (x2, y2), colors["missing"], 2, cv2.LINE_4)
 
             # Draw label
-            label = f"❌ MISSING: {class_name}"
+            label = f"[ERROR] MISSING: {class_name}"
             font = cv2.FONT_HERSHEY_SIMPLEX
             font_scale = 0.5
             thickness = 1
@@ -772,9 +772,9 @@ class YOLOXDetector:
         # Add legend
         legend_y = 20
         legend_items = [
-            ("🔍 Model Detection", colors["detection"]),
-            ("🎯 Ground Truth", colors["ground_truth"]),
-            ("❌ Missing GT", colors["missing"])
+            (" Model Detection", colors["detection"]),
+            (" Ground Truth", colors["ground_truth"]),
+            ("[ERROR] Missing GT", colors["missing"])
         ]
 
         for text, color in legend_items:
@@ -786,7 +786,7 @@ class YOLOXDetector:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
             cv2.imwrite(save_path, image_bgr)
-            print(f"💾 Comparison visualization saved: {save_path}")
+            print(f" Comparison visualization saved: {save_path}")
 
         return image_rgb
 
@@ -853,7 +853,7 @@ class YOLOXDetector:
         
         with open(json_path, "w") as f:
             json.dump(result_data, f, indent=2)
-        print(f"💾 YOLOX results saved: {json_path}")
+        print(f" YOLOX results saved: {json_path}")
         
         # Save visualization
         vis_path = f"{output_dir}/yolox_{base_name}_visualization.jpg"
@@ -923,22 +923,22 @@ def detect_objects_in_image(image_path, use_gpu=True):
         detector = YOLOXDetector()
         
         if detector.model is None:
-            print("❌ YOLOX model not loaded")
+            print("[ERROR] YOLOX model not loaded")
             return []
         
         if not os.path.exists(image_path):
-            print(f"❌ Image not found: {image_path}")
+            print(f"[ERROR] Image not found: {image_path}")
             return []
         
         # Load image
         image = cv2.imread(image_path)
         if image is None:
-            print(f"❌ Could not load image: {image_path}")
+            print(f"[ERROR] Could not load image: {image_path}")
             return []
         
         original_shape = image.shape[:2]
         
-        print(f"🔍 Running YOLOX on {image_path}")
+        print(f" Running YOLOX on {image_path}")
         input_tensor, ratio = detector.preprocess_image(image)
         
         with torch.no_grad():
@@ -1065,13 +1065,13 @@ def yolox_only(image1_path: str = "IMG_1464.jpg", image2_path: str = "IMG_1465.j
 def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path: str = "IMG_1465.jpg"):
     """Comprehensive YOLOX-only analysis with file outputs"""
     print("=" * 60)
-    print("🔍 YOLOX COMPREHENSIVE ANALYSIS")
+    print(" YOLOX COMPREHENSIVE ANALYSIS")
     print("=" * 60)
     
     detector = YOLOXDetector()
     
     if detector.model is None:
-        print("❌ Cannot run - YOLOX not available")
+        print("[ERROR] Cannot run - YOLOX not available")
         return
     
     # Process images
@@ -1080,10 +1080,10 @@ def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path:
     
     for img_path in [image1_path, image2_path]:
         if not os.path.exists(img_path):
-            print(f"❌ {img_path} not found")
+            print(f"[ERROR] {img_path} not found")
             continue
         
-        print(f"\n📸 Processing {img_path}")
+        print(f"\n Processing {img_path}")
         print("-" * 40)
         
         # Run detection
@@ -1096,15 +1096,15 @@ def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path:
             # Analyze results
             analysis = detector.analyze_detections(detections)
             
-            print(f"✅ Objects detected: {len(detections)}")
-            print(f"📁 Results saved: {json_path}")
-            print(f"🖼️  Visualization: {vis_path}")
-            print(f"📊 Categories: {analysis['categories']}")
-            print(f"💯 Confidence range: {analysis['confidence_stats']['min']:.3f} - {analysis['confidence_stats']['max']:.3f}")
+            print(f"[OK] Objects detected: {len(detections)}")
+            print(f" Results saved: {json_path}")
+            print(f"  Visualization: {vis_path}")
+            print(f" Categories: {analysis['categories']}")
+            print(f" Confidence range: {analysis['confidence_stats']['min']:.3f} - {analysis['confidence_stats']['max']:.3f}")
             
             # Show top detections
             if len(detections) > 0:
-                print("🏆 Top detections:")
+                print(" Top detections:")
                 sorted_detections = sorted(detections, key=lambda x: x['confidence'], reverse=True)
                 for i, det in enumerate(sorted_detections[:5], 1):
                     print(f"  {i}. {det['object']}: {det['confidence']:.3f}")
@@ -1116,16 +1116,16 @@ def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path:
             }
             total_objects += len(detections)
         else:
-            print(f"❌ No objects detected in {img_path}")
+            print(f"[ERROR] No objects detected in {img_path}")
     
     # Summary
     if all_results:
         print(f"\n{'='*60}")
-        print("📈 YOLOX SUMMARY")
+        print(" YOLOX SUMMARY")
         print(f"{'='*60}")
         print(f"🔢 Total objects detected: {total_objects}")
-        print(f"📁 Results saved to: outputs/yolox_*")
-        print(f"🎯 Analysis complete!")
+        print(f" Results saved to: outputs/yolox_*")
+        print(f" Analysis complete!")
         
         # Compare if we have both images
         if len(all_results) == 2:
@@ -1137,7 +1137,7 @@ def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path:
             diff1 = obj1 - obj2
             diff2 = obj2 - obj1
             
-            print(f"\n🔍 COMPARISON:")
+            print(f"\n COMPARISON:")
             print(f"   Common objects: {sorted(common)}")
             print(f"   Only in {os.path.basename(imgs[0])}: {sorted(diff1)}")
             print(f"   Only in {os.path.basename(imgs[1])}: {sorted(diff2)}")
@@ -1147,7 +1147,7 @@ def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path:
 
 def test_confusion_matrix(image_path: str = "test_photos/images/bedroom1.jpeg"):
     """Easy test function for confusion matrix - just call this!"""
-    print(f"🧪 TESTING YOLOX CONFUSION MATRIX")
+    print(f" TESTING YOLOX CONFUSION MATRIX")
     print(f"Image: {image_path}")
 
     try:
@@ -1155,17 +1155,17 @@ def test_confusion_matrix(image_path: str = "test_photos/images/bedroom1.jpeg"):
         detections = detector.detect_objects(image_path)
 
         if detections:
-            print(f"✅ SUCCESS: Detected {len(detections)} objects")
+            print(f"[OK] SUCCESS: Detected {len(detections)} objects")
             base_name = os.path.splitext(os.path.basename(image_path))[0]
             vis_path = f"outputs/yolox_{base_name}_comparison.jpg"
-            print(f"🖼️  Comparison visualization saved: {vis_path}")
+            print(f"  Comparison visualization saved: {vis_path}")
             return True
         else:
-            print("❌ No objects detected")
+            print("[ERROR] No objects detected")
             return False
 
     except Exception as e:
-        print(f"❌ Test failed: {e}")
+        print(f"[ERROR] Test failed: {e}")
         return False
 
 
@@ -1180,19 +1180,22 @@ def test_all_photos(test_photos_dir: str = "test_photos", use_gpu=True):
     Returns:
         dict: Summary results for all tested images
     """
+    import time
+    start_time = time.time()
+    
     print("="*60)
-    print("🧪 TESTING YOLOX ON ALL TEST PHOTOS")
+    print("TESTING YOLOX ON ALL TEST PHOTOS")
     print("="*60)
     
     images_dir = os.path.join(test_photos_dir, "images")
     labels_dir = os.path.join(test_photos_dir, "labels")
     
     if not os.path.exists(images_dir):
-        print(f"❌ Images directory not found: {images_dir}")
+        print(f"[ERROR] Images directory not found: {images_dir}")
         return {}
     
     if not os.path.exists(labels_dir):
-        print(f"❌ Labels directory not found: {labels_dir}")
+        print(f"[ERROR] Labels directory not found: {labels_dir}")
         return {}
     
     # Get all image files
@@ -1202,7 +1205,7 @@ def test_all_photos(test_photos_dir: str = "test_photos", use_gpu=True):
     image_files.sort()
     
     if not image_files:
-        print(f"❌ No image files found in: {images_dir}")
+        print(f"[ERROR] No image files found in: {images_dir}")
         return {}
     
     print(f"\nFound {len(image_files)} test images")
@@ -1222,11 +1225,11 @@ def test_all_photos(test_photos_dir: str = "test_photos", use_gpu=True):
         
         # Check if label file exists
         if not os.path.exists(label_path):
-            print(f"\n[{i}/{len(image_files)}] ⚠️  Skipping {image_file} - no matching label file")
+            print(f"\n[{i}/{len(image_files)}] [WARNING]  Skipping {image_file} - no matching label file")
             failed_tests += 1
             continue
         
-        print(f"\n[{i}/{len(image_files)}] 📸 Testing: {image_file}")
+        print(f"\n[{i}/{len(image_files)}]  Testing: {image_file}")
         print(f"              Label: {label_file}")
         
         try:
@@ -1242,7 +1245,7 @@ def test_all_photos(test_photos_dir: str = "test_photos", use_gpu=True):
             }
             
             # Print summary for this image
-            print(f"   ✅ mAP: {results['mean_average_precision']:.4f}, "
+            print(f"   [OK] mAP: {results['mean_average_precision']:.4f}, "
                   f"mF1: {results['mean_f1_score']:.4f}, "
                   f"Unmatched: {results['unmatched_objects']}, "
                   f"Missing: {results['missing_objects']}")
@@ -1250,7 +1253,7 @@ def test_all_photos(test_photos_dir: str = "test_photos", use_gpu=True):
             successful_tests += 1
             
         except Exception as e:
-            print(f"   ❌ Failed: {str(e)}")
+            print(f"   [ERROR] Failed: {str(e)}")
             all_results[image_file] = {
                 'error': str(e),
                 'image_path': image_path,
@@ -1261,7 +1264,7 @@ def test_all_photos(test_photos_dir: str = "test_photos", use_gpu=True):
     
     # Print overall summary
     print("\n" + "="*60)
-    print("📊 OVERALL TEST SUMMARY")
+    print(" OVERALL TEST SUMMARY")
     print("="*60)
     print(f"Total images: {len(image_files)}")
     print(f"Successful: {successful_tests}")
@@ -1291,6 +1294,11 @@ def test_all_photos(test_photos_dir: str = "test_photos", use_gpu=True):
                       f"Unmatched: {res['unmatched_objects']:2d} | "
                       f"Missing: {res['missing_objects']:2d}")
     
+    print("="*60)
+    
+    # Display total execution time
+    elapsed_time = time.time() - start_time
+    print(f"\nTotal Execution Time: {elapsed_time:.2f} seconds ({elapsed_time/60:.2f} minutes)")
     print("="*60)
     
     return all_results

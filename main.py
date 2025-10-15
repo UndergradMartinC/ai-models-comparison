@@ -1,7 +1,7 @@
 import time
 #from dino import dino
 from rfdetr import rfdetr
-from yolonas import yolonas
+#from yolox import yolox
 import os
 
 def time_function(func, name):

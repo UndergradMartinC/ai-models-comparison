@@ -33,9 +33,9 @@ class GroundingDINODetector:
     def __init__(self, device: str = "auto"):
         self.device = self._get_device(device)
         self.model = None
-        self.box_threshold = 0.35
-        self.text_threshold = 0.35
-        self.confidence_threshold = 0.35
+        self.box_threshold = 0.5
+        self.text_threshold = 0.5
+        self.confidence_threshold = 0.5
         
         self._load_model()
     
@@ -225,9 +225,7 @@ class GroundingDINODetector:
             # Save comparison visualization image (shows both detections and ground truth)
             base_name = os.path.splitext(os.path.basename(image_path))[0]
             vis_path = f"outputs/dino_{base_name}_comparison.jpg"
-            # Note: We don't have a create_comparison_visualization method for Grounding DINO yet
-            # For now, we'll use the regular visualization
-            self.create_visualization(image_path, detections, vis_path)
+            self.create_comparison_visualization(image_path, detections, matrix, vis_path)
 
             return detections
             
@@ -302,6 +300,142 @@ class GroundingDINODetector:
             cv2.imwrite(save_path, image_bgr)
             print(f" Visualization saved: {save_path}")
         
+        return image_rgb
+    
+    def create_comparison_visualization(self, image_path: str, detections: List[Dict], matrix, save_path: str = None):
+        """Create visualization showing both model detections and ground truth annotations"""
+        if not os.path.exists(image_path):
+            print(f"[ERROR] Image not found: {image_path}")
+            return None
+
+        # Load image
+        image = cv2.imread(image_path)
+        if image is None:
+            print(f"[ERROR] Could not load image: {image_path}")
+            return None
+
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # Colors for different types of boxes
+        colors = {
+            "detection": (0, 255, 0),      # Green for model detections
+            "ground_truth": (255, 0, 0),   # Red for ground truth
+            "missing": (0, 0, 255),       # Blue for missing ground truth
+            "false_positive": (255, 255, 0)  # Yellow for false positives
+        }
+
+        # Draw model detections (green boxes)
+        for det in detections:
+            bbox = det["bbox"]
+            obj = det.get("object", det.get("class", "unknown"))  # Handle both 'object' and 'class' keys
+            conf = det["confidence"]
+
+            x1, y1, x2, y2 = bbox
+
+            # Draw bounding box
+            cv2.rectangle(image_rgb, (x1, y1), (x2, y2), colors["detection"], 2)
+
+            # Draw label
+            label = f" {obj}: {conf:.2f}"
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.5
+            thickness = 1
+
+            # Position label
+            text_x = x1
+            text_y = y1 - 5
+            if text_y < 15:
+                text_y = y1 + 20
+
+            # Text background
+            (text_width, text_height), _ = cv2.getTextSize(label, font, font_scale, thickness)
+            cv2.rectangle(image_rgb, (text_x, text_y - text_height - 3),
+                         (text_x + text_width, text_y + 3), colors["detection"], -1)
+
+            # White text
+            cv2.putText(image_rgb, label, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+
+        # Draw ground truth annotations (red boxes)
+        ground_truth_objects = matrix.reference_object_array
+        for gt_obj in ground_truth_objects:
+            bbox = gt_obj.bbox
+            class_name = gt_obj.class_name
+
+            x1, y1, x2, y2 = bbox
+
+            # Draw bounding box
+            cv2.rectangle(image_rgb, (x1, y1), (x2, y2), colors["ground_truth"], 2)
+
+            # Draw label
+            label = f" GT: {class_name}"
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.5
+            thickness = 1
+
+            # Position label
+            text_x = x1
+            text_y = y2 + 15  # Position below box to avoid overlap with detection labels
+            if text_y > image_rgb.shape[0] - 5:
+                text_y = y2 - 5
+
+            # Text background
+            (text_width, text_height), _ = cv2.getTextSize(label, font, font_scale, thickness)
+            cv2.rectangle(image_rgb, (text_x, text_y - text_height - 3),
+                         (text_x + text_width, text_y + 3), colors["ground_truth"], -1)
+
+            # White text
+            cv2.putText(image_rgb, label, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+
+        # Draw missing ground truth objects (blue boxes)
+        missing_objects = matrix.missing_objects
+        for missing_obj in missing_objects:
+            bbox = missing_obj.bbox
+            class_name = missing_obj.class_name
+
+            x1, y1, x2, y2 = bbox
+
+            # Draw bounding box
+            cv2.rectangle(image_rgb, (x1, y1), (x2, y2), colors["missing"], 2)
+
+            # Draw label
+            label = f"[ERROR] MISSING: {class_name}"
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.5
+            thickness = 1
+
+            # Position label
+            text_x = x1
+            text_y = y1 - 5
+            if text_y < 15:
+                text_y = y1 + 20
+
+            # Text background
+            (text_width, text_height), _ = cv2.getTextSize(label, font, font_scale, thickness)
+            cv2.rectangle(image_rgb, (text_x, text_y - text_height - 3),
+                         (text_x + text_width, text_y + 3), colors["missing"], -1)
+
+            # White text
+            cv2.putText(image_rgb, label, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+
+        # Add legend
+        legend_y = 20
+        legend_items = [
+            (" Model Detection", colors["detection"]),
+            (" Ground Truth", colors["ground_truth"]),
+            ("[ERROR] Missing GT", colors["missing"])
+        ]
+
+        for text, color in legend_items:
+            cv2.putText(image_rgb, text, (10, legend_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+            legend_y += 25
+
+        # Save if path provided
+        if save_path:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(save_path, image_bgr)
+            print(f" Comparison visualization saved: {save_path}")
+
         return image_rgb
     
     def analyze_detections(self, detections: List[Dict]) -> Dict:

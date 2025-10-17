@@ -679,7 +679,7 @@ class YOLOXDetector:
         # Draw model detections (green boxes)
         for det in detections:
             bbox = det["bbox"]
-            obj = det["object"]
+            obj = det.get("object", det.get("class", "unknown"))  # Handle both 'object' and 'class' keys
             conf = det["confidence"]
 
             x1, y1, x2, y2 = bbox

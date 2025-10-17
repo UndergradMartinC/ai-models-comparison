@@ -40,7 +40,7 @@ INDOOR_BUSINESS_CLASSES = [
     "toothbrush"       # Personal hygiene items
 ]
 
-CONFIDENCE_THRESHOLD = 0.25
+CONFIDENCE_THRESHOLD = 0.5
 
 AREA_THRESHOLD = 0.9
 

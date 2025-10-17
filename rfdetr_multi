@@ -24,6 +24,11 @@ def rfdetr(image_path, reference_json_path, use_gpu=True, create_overlay=True):
     # Load reference data
     with open(reference_json_path, 'r') as f:
         reference_data = json.load(f)
+    # Handle different JSON formats
+    # Format 1: [{"class": "...", "bbox": [...]}, ...]
+    # Format 2: {"image": "...", "objects": [{"class": "...", "bbox": [...]}]}
+    if isinstance(reference_data, dict) and 'objects' in reference_data:
+        reference_data = reference_data['objects']
     
     # Detect objects in the image
     detected_objects = detect_objects_in_image(image_path, use_gpu)
@@ -81,9 +86,9 @@ def detect_objects_in_image(image_path, use_gpu=True):
         device = setup_device(use_gpu)
         
         # Load model and processor
-        print("Loading RF-DETR model (ResNet-101 - most powerful variant)...")
-        model = RTDetrForObjectDetection.from_pretrained("PekingU/rtdetr_r101vd")
-        processor = RTDetrImageProcessor.from_pretrained("PekingU/rtdetr_r101vd")
+        print("Loading RF-DETR model...")
+        model = RTDetrForObjectDetection.from_pretrained("PekingU/rtdetr_r50vd")
+        processor = RTDetrImageProcessor.from_pretrained("PekingU/rtdetr_r50vd")
         model = model.to(device)
         model.eval()
         
@@ -446,6 +451,142 @@ def rfdetr_with_overlay(image_path, reference_json_path, use_gpu=True, save_over
     return results, overlay_path
 
 
+def test_all_photos(test_photos_dir: str = "test_photos", use_gpu=True):
+    """
+    Test RF-DETR on all images in the test_photos directory
+    
+    Args:
+        test_photos_dir: Directory containing images/ and labels/ subdirectories
+        use_gpu: Whether to use GPU if available
+    
+    Returns:
+        dict: Summary results for all tested images
+    """
+    import os
+    import time
+    start_time = time.time()
+    
+    print("="*60)
+    print("TESTING RF-DETR ON ALL TEST PHOTOS")
+    print("="*60)
+    
+    images_dir = os.path.join(test_photos_dir, "images")
+    labels_dir = os.path.join(test_photos_dir, "labels")
+    
+    if not os.path.exists(images_dir):
+        print(f"[ERROR] Images directory not found: {images_dir}")
+        return {}
+    
+    if not os.path.exists(labels_dir):
+        print(f"[ERROR] Labels directory not found: {labels_dir}")
+        return {}
+    
+    # Get all image files
+    image_extensions = ('.jpg', '.jpeg', '.png')
+    image_files = [f for f in os.listdir(images_dir) 
+                   if f.lower().endswith(image_extensions)]
+    image_files.sort()
+    
+    if not image_files:
+        print(f"[ERROR] No image files found in: {images_dir}")
+        return {}
+    
+    print(f"\nFound {len(image_files)} test images")
+    print("-"*60)
+    
+    # Process each image
+    all_results = {}
+    successful_tests = 0
+    failed_tests = 0
+    
+    for i, image_file in enumerate(image_files, 1):
+        # Construct paths
+        image_path = os.path.join(images_dir, image_file)
+        base_name = os.path.splitext(image_file)[0]
+        label_file = f"{base_name}.json"
+        label_path = os.path.join(labels_dir, label_file)
+        
+        # Check if label file exists
+        if not os.path.exists(label_path):
+            print(f"\n[{i}/{len(image_files)}] [WARNING]  Skipping {image_file} - no matching label file")
+            failed_tests += 1
+            continue
+        
+        print(f"\n[{i}/{len(image_files)}]  Testing: {image_file}")
+        print(f"              Label: {label_file}")
+        
+        try:
+            # Run RF-DETR with confusion matrix analysis
+            results = rfdetr(image_path, label_path, use_gpu=use_gpu, create_overlay=True)
+            
+            # Store results
+            all_results[image_file] = {
+                'results': results,
+                'image_path': image_path,
+                'label_path': label_path,
+                'status': 'success'
+            }
+            
+            # Print summary for this image
+            print(f"   [OK] mAP: {results['mean_average_precision']:.4f}, "
+                  f"mF1: {results['mean_f1_score']:.4f}, "
+                  f"Unmatched: {results['unmatched_objects']}, "
+                  f"Missing: {results['missing_objects']}")
+            
+            successful_tests += 1
+            
+        except Exception as e:
+            print(f"   [ERROR] Failed: {str(e)}")
+            all_results[image_file] = {
+                'error': str(e),
+                'image_path': image_path,
+                'label_path': label_path,
+                'status': 'failed'
+            }
+            failed_tests += 1
+    
+    # Print overall summary
+    print("\n" + "="*60)
+    print(" OVERALL TEST SUMMARY")
+    print("="*60)
+    print(f"Total images: {len(image_files)}")
+    print(f"Successful: {successful_tests}")
+    print(f"Failed: {failed_tests}")
+    
+    # Calculate average metrics across successful tests
+    if successful_tests > 0:
+        avg_map = sum(r['results']['mean_average_precision'] 
+                     for r in all_results.values() 
+                     if r['status'] == 'success') / successful_tests
+        avg_f1 = sum(r['results']['mean_f1_score'] 
+                    for r in all_results.values() 
+                    if r['status'] == 'success') / successful_tests
+        
+        print(f"\nAverage Metrics Across All Tests:")
+        print(f"  Average mAP: {avg_map:.4f}")
+        print(f"  Average mF1: {avg_f1:.4f}")
+        
+        # Show per-image results
+        print(f"\nPer-Image Results:")
+        print("-"*60)
+        for image_file, result_data in all_results.items():
+            if result_data['status'] == 'success':
+                res = result_data['results']
+                print(f"{image_file:20s} | mAP: {res['mean_average_precision']:.4f} | "
+                      f"mF1: {res['mean_f1_score']:.4f} | "
+                      f"Unmatched: {res['unmatched_objects']:2d} | "
+                      f"Missing: {res['missing_objects']:2d}")
+    
+    print("="*60)
+    
+    # Display total execution time
+    elapsed_time = time.time() - start_time
+    print(f"\nTotal Execution Time: {elapsed_time:.2f} seconds ({elapsed_time/60:.2f} minutes)")
+    print("="*60)
+    
+    return all_results
+
+
 def test_confusion_matrix():
     """
     Dummy function to test confusion matrix with simulated detections
@@ -572,32 +713,29 @@ def test_overlay_with_dummy_data():
 
 # Main execution example
 if __name__ == "__main__":
-    # Test confusion matrix with dummy data
-    test_confusion_matrix()
+    import sys
     
-    # Test overlay with dummy data
-    print("\n" + "="*60)
-    print("Testing overlay visualization...")
-    print("="*60)
-    overlay_path = test_overlay_with_dummy_data()
-    if overlay_path:
-        print(f"✓ Test overlay created: {overlay_path}")
+    # Check if user wants to test all photos
+    if len(sys.argv) > 1 and sys.argv[1] == "--all":
+        # Test all photos in test_photos directory
+        test_all_photos(test_photos_dir="test_photos", use_gpu=True)
     else:
-        print("✗ Failed to create test overlay")
-    
-    print("\n" + "="*60)
-    print("To run actual RF-DETR detection, uncomment the lines below:")
-    print("="*60)
-    
-    # # Example usage with real RF-DETR detection
-    # image_path = "before.jpg"
-    # reference_json_path = "sample_ground_truth.json"
-    # 
-    # # Run RF-DETR with overlay visualization (default)
-    # results = rfdetr(image_path, reference_json_path, use_gpu=True, create_overlay=True)
-    # 
-    # # Or run without overlay
-    # # results = rfdetr(image_path, reference_json_path, use_gpu=True, create_overlay=False)
-    # 
-    # # Or use the separate overlay function
-    # # results, overlay_path = rfdetr_with_overlay(image_path, reference_json_path, use_gpu=True)
+        # Test single image (default behavior matching yolox.py interface)
+        print("="*60)
+        print("Testing RF-DETR with model_tests.py interface")
+        print("="*60)
+        print("Tip: Run with '--all' to test all images in test_photos/")
+        print("="*60)
+        
+        # Example usage
+        image_path = "test_photos/images/bedroom1.jpeg"
+        reference_json_path = "test_photos/labels/bedroom1.json"
+        
+        # Run RF-DETR with confusion matrix analysis
+        results = rfdetr(image_path, reference_json_path, use_gpu=True, create_overlay=True)
+        
+        print("\n" + "="*60)
+        print("Test Complete!")
+        print("="*60)
+        print("\nTo test all images, run: python rfdetr_multi --all")
+        print("="*60)

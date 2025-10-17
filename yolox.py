@@ -13,6 +13,8 @@ import warnings
 import torch.nn.functional as F
 from typing import List, Dict, Tuple
 from collections import Counter
+from model_tests import ConfusionMatrix
+from COCO_CLASSES import INDOOR_BUSINESS_CLASSES
 
 # Suppress warnings for cleaner output
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -373,7 +375,7 @@ class YOLOXDetector:
     def _load_model(self, model_path: str):
         """Load YOLOX model"""
         if not os.path.exists(model_path):
-            print(f"❌ YOLOX model file not found: {model_path}")
+            print(f"[ERROR] YOLOX model file not found: {model_path}")
             return
         
         try:
@@ -399,10 +401,10 @@ class YOLOXDetector:
             self.model.load_state_dict(new_state_dict, strict=False)
             self.model.to(self.device)
             self.model.eval()
-            print("✅ YOLOX loaded successfully!")
+            print("[OK] YOLOX loaded successfully!")
             
         except Exception as e:
-            print(f"❌ Failed to load YOLOX: {e}")
+            print(f"[ERROR] Failed to load YOLOX: {e}")
             self.model = None
     
     def preprocess_image(self, image: np.ndarray) -> Tuple[torch.Tensor, float]:
@@ -466,7 +468,7 @@ class YOLOXDetector:
             )
         except ImportError:
             # Fallback: use all detections if NMS is not available
-            print("⚠️  NMS not available, using all detections")
+            print("[WARNING]  NMS not available, using all detections")
             nms_out_index = torch.arange(outputs.shape[0])
         
         outputs = outputs[nms_out_index]
@@ -504,45 +506,90 @@ class YOLOXDetector:
     def detect_objects(self, image_path: str) -> List[Dict]:
         """Detect objects in an image using YOLOX"""
         if self.model is None:
-            print("❌ YOLOX model not loaded")
+            print("[ERROR] YOLOX model not loaded")
             return []
         
         if not os.path.exists(image_path):
-            print(f"❌ Image not found: {image_path}")
+            print(f"[ERROR] Image not found: {image_path}")
             return []
         
         # Load image
         image = cv2.imread(image_path)
         if image is None:
-            print(f"❌ Could not load image: {image_path}")
+            print(f"[ERROR] Could not load image: {image_path}")
             return []
         
         original_shape = image.shape[:2]
         
         try:
-            print(f"🔍 Running YOLOX on {image_path}")
+            # Create matrix from JSON ground truth
+            base_name = os.path.splitext(os.path.basename(image_path))[0]
+            ground_truth_file = f"test_photos/labels/{base_name}_test.json"
+
+            # Fallback to regular json file if _test.json doesn't exist
+            if not os.path.exists(ground_truth_file):
+                ground_truth_file = f"test_photos/labels/{base_name}.json"
+
+            # Final fallback to sample_test.json in current directory
+            if not os.path.exists(ground_truth_file):
+                ground_truth_file = "sample_test.json"
+
+            if os.path.exists(ground_truth_file):
+                with open(ground_truth_file, 'r') as f:
+                    ground_truth = json.load(f)
+                matrix = ConfusionMatrix(ground_truth)
+                print(f" Created confusion matrix from {ground_truth_file}")
+            else:
+                print(f"[WARNING] Ground truth file not found: {ground_truth_file}")
+                matrix = None
+
+            print(f" Running YOLOX on {image_path}")
             input_tensor, ratio = self.preprocess_image(image)
-            
+
             with torch.no_grad():
                 outputs = self.model(input_tensor)
                 detections = self.postprocess_detections(outputs, original_shape, ratio)
-                print(f"✅ YOLOX detected {len(detections)} objects")
+                print(f"[OK] YOLOX detected {len(detections)} objects")
+
+                # Handle each detection through confusion matrix
+                if matrix is not None:
+                    for detection in detections:
+                        detected_class = detection["object"]
+                        bbox = detection["bbox"]
+                        matrix.handle_object_data(detected_class, bbox)
+
+                # Get matrix metrics
+                if matrix is not None:
+                    class_metrics, mean_ap, mean_f1 = matrix.get_matrix_metrics()
+                    print(f" Confusion Matrix Results: mAP={mean_ap:.3f}, mF1={mean_f1:.3f}")
+
+                    # Print per-class metrics for detected classes
+                    detected_classes = set(d["object"] for d in detections)
+                    for metric in class_metrics:
+                        if metric.class_name in detected_classes:
+                            print(f"  {metric.class_name}: P={metric.precision:.3f}, R={metric.sensitivity:.3f}, F1={metric.f1_score:.3f}")
+
+                # Save comparison visualization image (shows both detections and ground truth)
+                base_name = os.path.splitext(os.path.basename(image_path))[0]
+                vis_path = f"outputs/yolox_{base_name}_comparison.jpg"
+                self.create_comparison_visualization(image_path, detections, matrix, vis_path)
+
                 return detections
-                
+
         except Exception as e:
-            print(f"❌ YOLOX failed: {e}")
+            print(f"[ERROR] YOLOX failed: {e}")
             return []
     
     def create_visualization(self, image_path: str, detections: List[Dict], save_path: str = None):
         """Create visualization of YOLOX detections"""
         if not os.path.exists(image_path):
-            print(f"❌ Image not found: {image_path}")
+            print(f"[ERROR] Image not found: {image_path}")
             return None
         
         # Load image
         image = cv2.imread(image_path)
         if image is None:
-            print(f"❌ Could not load image: {image_path}")
+            print(f"[ERROR] Could not load image: {image_path}")
             return None
         
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -579,7 +626,7 @@ class YOLOXDetector:
             cv2.rectangle(image_rgb, (x1, y1), (x2, y2), color, 3)
             
             # Draw label with YOLOX prefix
-            label = f"🔍 YOLOX: {obj} ({conf:.2f})"
+            label = f" YOLOX: {obj} ({conf:.2f})"
             font = cv2.FONT_HERSHEY_SIMPLEX
             font_scale = 0.6
             thickness = 2
@@ -603,10 +650,146 @@ class YOLOXDetector:
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
             cv2.imwrite(save_path, image_bgr)
-            print(f"💾 YOLOX visualization saved: {save_path}")
+            print(f" YOLOX visualization saved: {save_path}")
         
         return image_rgb
-    
+
+    def create_comparison_visualization(self, image_path: str, detections: List[Dict], matrix: ConfusionMatrix, save_path: str = None):
+        """Create visualization showing both model detections and ground truth annotations"""
+        if not os.path.exists(image_path):
+            print(f"[ERROR] Image not found: {image_path}")
+            return None
+
+        # Load image
+        image = cv2.imread(image_path)
+        if image is None:
+            print(f"[ERROR] Could not load image: {image_path}")
+            return None
+
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # Colors for different types of boxes
+        colors = {
+            "detection": (0, 255, 0),      # Green for model detections
+            "ground_truth": (255, 0, 0),   # Red for ground truth
+            "missing": (0, 0, 255),       # Blue for missing ground truth
+            "false_positive": (255, 255, 0)  # Yellow for false positives
+        }
+
+        # Draw model detections (green boxes)
+        for det in detections:
+            bbox = det["bbox"]
+            obj = det.get("object", det.get("class", "unknown"))  # Handle both 'object' and 'class' keys
+            conf = det["confidence"]
+
+            x1, y1, x2, y2 = bbox
+
+            # Draw bounding box
+            cv2.rectangle(image_rgb, (x1, y1), (x2, y2), colors["detection"], 2)
+
+            # Draw label
+            label = f" {obj}: {conf:.2f}"
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.5
+            thickness = 1
+
+            # Position label
+            text_x = x1
+            text_y = y1 - 5
+            if text_y < 15:
+                text_y = y1 + 20
+
+            # Text background
+            (text_width, text_height), _ = cv2.getTextSize(label, font, font_scale, thickness)
+            cv2.rectangle(image_rgb, (text_x, text_y - text_height - 3),
+                         (text_x + text_width, text_y + 3), colors["detection"], -1)
+
+            # White text
+            cv2.putText(image_rgb, label, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+
+        # Draw ground truth annotations (red boxes)
+        ground_truth_objects = matrix.reference_object_array
+        for gt_obj in ground_truth_objects:
+            bbox = gt_obj.bbox
+            class_name = gt_obj.class_name
+
+            x1, y1, x2, y2 = bbox
+
+            # Draw bounding box
+            cv2.rectangle(image_rgb, (x1, y1), (x2, y2), colors["ground_truth"], 2)
+
+            # Draw label
+            label = f" GT: {class_name}"
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.5
+            thickness = 1
+
+            # Position label
+            text_x = x1
+            text_y = y1 - 5
+            if text_y < 15:
+                text_y = y1 + 20
+
+            # Text background
+            (text_width, text_height), _ = cv2.getTextSize(label, font, font_scale, thickness)
+            cv2.rectangle(image_rgb, (text_x, text_y - text_height - 3),
+                         (text_x + text_width, text_y + 3), colors["ground_truth"], -1)
+
+            # White text
+            cv2.putText(image_rgb, label, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+
+        # Draw missing ground truth objects (blue boxes with dashed lines)
+        missing_objects = matrix.missing_objects
+        for missing_obj in missing_objects:
+            bbox = missing_obj.bbox
+            class_name = missing_obj.class_name
+
+            x1, y1, x2, y2 = bbox
+
+            # Draw bounding box with dashed line
+            cv2.rectangle(image_rgb, (x1, y1), (x2, y2), colors["missing"], 2, cv2.LINE_4)
+
+            # Draw label
+            label = f"[ERROR] MISSING: {class_name}"
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.5
+            thickness = 1
+
+            # Position label
+            text_x = x1
+            text_y = y1 - 5
+            if text_y < 15:
+                text_y = y1 + 20
+
+            # Text background
+            (text_width, text_height), _ = cv2.getTextSize(label, font, font_scale, thickness)
+            cv2.rectangle(image_rgb, (text_x, text_y - text_height - 3),
+                         (text_x + text_width, text_y + 3), colors["missing"], -1)
+
+            # White text
+            cv2.putText(image_rgb, label, (text_x, text_y), font, font_scale, (255, 255, 255), thickness)
+
+        # Add legend
+        legend_y = 20
+        legend_items = [
+            (" Model Detection", colors["detection"]),
+            (" Ground Truth", colors["ground_truth"]),
+            ("[ERROR] Missing GT", colors["missing"])
+        ]
+
+        for text, color in legend_items:
+            cv2.putText(image_rgb, text, (10, legend_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+            legend_y += 25
+
+        # Save if path provided
+        if save_path:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+            cv2.imwrite(save_path, image_bgr)
+            print(f" Comparison visualization saved: {save_path}")
+
+        return image_rgb
+
     def analyze_detections(self, detections: List[Dict]) -> Dict:
         """Analyze YOLOX detections"""
         objects = [det["object"] for det in detections]
@@ -670,13 +853,196 @@ class YOLOXDetector:
         
         with open(json_path, "w") as f:
             json.dump(result_data, f, indent=2)
-        print(f"💾 YOLOX results saved: {json_path}")
+        print(f" YOLOX results saved: {json_path}")
         
         # Save visualization
         vis_path = f"{output_dir}/yolox_{base_name}_visualization.jpg"
         self.create_visualization(image_path, detections, vis_path)
         
         return json_path, vis_path
+
+
+def yolox(image_path, reference_json_path, use_gpu=True, create_overlay=True):
+    """
+    Main YOLOX function for object detection and confusion matrix analysis
+    
+    Args:
+        image_path: Path to the image file to analyze
+        reference_json_path: Path to ground truth JSON file
+        use_gpu: Whether to use GPU if available (default: True)
+        create_overlay: Whether to create overlay visualization (default: True)
+    
+    Returns:
+        dict: Formatted confusion matrix results (includes 'overlay_path' if created)
+    """
+    print("Running YOLOX model...")
+    
+    # Load reference data
+    with open(reference_json_path, 'r') as f:
+        reference_data = json.load(f)
+    
+    # Handle different JSON formats
+    # Format 1: [{"class": "...", "bbox": [...]}, ...]
+    # Format 2: {"image": "...", "objects": [{"class": "...", "bbox": [...]}]}
+    if isinstance(reference_data, dict) and 'objects' in reference_data:
+        reference_data = reference_data['objects']
+    
+    # Detect objects in the image
+    detected_objects = detect_objects_in_image(image_path, use_gpu)
+    
+    # Create confusion matrix and process detections
+    confusion_matrix = ConfusionMatrix(reference_data)
+    
+    # Process each detected object through the confusion matrix
+    for obj in detected_objects:
+        confusion_matrix.handle_object_data(obj['class'], obj['bbox'])
+    
+    # Get metrics and format results
+    class_metrics, mean_ap, mean_f1 = confusion_matrix.get_matrix_metrics()
+    
+    # Format and print results
+    results = format_results(class_metrics, mean_ap, mean_f1, confusion_matrix)
+    print_results(results)
+    
+    return results
+
+
+def detect_objects_in_image(image_path, use_gpu=True):
+    """
+    Detect objects in an image using YOLOX model
+    
+    Args:
+        image_path: Path to the image file
+        use_gpu: Whether to use GPU if available
+    
+    Returns:
+        list: List of detected objects with format [{'class': str, 'bbox': [x1,y1,x2,y2]}, ...]
+    """
+    try:
+        # Create detector
+        detector = YOLOXDetector()
+        
+        if detector.model is None:
+            print("[ERROR] YOLOX model not loaded")
+            return []
+        
+        if not os.path.exists(image_path):
+            print(f"[ERROR] Image not found: {image_path}")
+            return []
+        
+        # Load image
+        image = cv2.imread(image_path)
+        if image is None:
+            print(f"[ERROR] Could not load image: {image_path}")
+            return []
+        
+        original_shape = image.shape[:2]
+        
+        print(f" Running YOLOX on {image_path}")
+        input_tensor, ratio = detector.preprocess_image(image)
+        
+        with torch.no_grad():
+            outputs = detector.model(input_tensor)
+            detections = detector.postprocess_detections(outputs, original_shape, ratio)
+        
+        # Clean up GPU memory
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        # Convert to format expected by model_tests
+        detected_objects = []
+        for det in detections:
+            detected_objects.append({
+                'class': det['object'],
+                'bbox': det['bbox'],
+                'confidence': det['confidence']
+            })
+        
+        print(f"Detected {len(detected_objects)} relevant objects")
+        return detected_objects
+        
+    except Exception as e:
+        print(f"Error processing {image_path}: {str(e)}")
+        return []
+
+
+def get_coco_class_mapping():
+    """
+    Create mapping from COCO class indices to indoor business class names
+    
+    Returns:
+        dict: Mapping from COCO class name to indoor class name
+    """
+    # Map COCO classes to indoor business classes
+    # YOLOX already outputs COCO class names, so this is mostly a passthrough
+    # that filters to only indoor business classes
+    mapping = {}
+    for class_name in INDOOR_BUSINESS_CLASSES:
+        mapping[class_name] = class_name
+    return mapping
+
+
+def format_results(class_metrics, mean_ap, mean_f1, confusion_matrix):
+    """
+    Format confusion matrix results for display
+    
+    Args:
+        class_metrics: List of ObjectMetrics objects
+        mean_ap: Mean average precision
+        mean_f1: Mean F1 score
+        confusion_matrix: ConfusionMatrix object
+    
+    Returns:
+        dict: Formatted results
+    """
+    results = {
+        'mean_average_precision': mean_ap,
+        'mean_f1_score': mean_f1,
+        'class_metrics': {},
+        'confusion_matrix': confusion_matrix.get_confusion_matrix().tolist(),
+        'unmatched_objects': len(confusion_matrix.unmatched_objects),
+        'missing_objects': len(confusion_matrix.missing_objects)
+    }
+    
+    # Format class-specific metrics
+    for metric in class_metrics:
+        results['class_metrics'][metric.class_name] = {
+            'precision': metric.precision,
+            'sensitivity': metric.sensitivity,
+            'specificity': metric.specificity,
+            'f1_score': metric.f1_score
+        }
+    
+    return results
+
+
+def print_results(results):
+    """
+    Print formatted confusion matrix results
+    
+    Args:
+        results: Formatted results dictionary
+    """
+    print("\n" + "="*60)
+    print("YOLOX CONFUSION MATRIX RESULTS")
+    print("="*60)
+    
+    print(f"\nOverall Metrics:")
+    print(f"  Mean Average Precision: {results['mean_average_precision']:.4f}")
+    print(f"  Mean F1 Score: {results['mean_f1_score']:.4f}")
+    print(f"  Unmatched Objects: {results['unmatched_objects']}")
+    print(f"  Missing Objects: {results['missing_objects']}")
+    
+    print(f"\nClass-Specific Metrics:")
+    print("-" * 60)
+    print(f"{'Class':<15} {'Precision':<10} {'Sensitivity':<12} {'Specificity':<12} {'F1 Score':<10}")
+    print("-" * 60)
+    
+    for class_name, metrics in results['class_metrics'].items():
+        print(f"{class_name:<15} {metrics['precision']:<10.4f} {metrics['sensitivity']:<12.4f} "
+              f"{metrics['specificity']:<12.4f} {metrics['f1_score']:<10.4f}")
+    
+    print("\n" + "="*60)
 
 
 def yolox_only(image1_path: str = "IMG_1464.jpg", image2_path: str = "IMG_1465.jpg"):
@@ -699,13 +1065,13 @@ def yolox_only(image1_path: str = "IMG_1464.jpg", image2_path: str = "IMG_1465.j
 def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path: str = "IMG_1465.jpg"):
     """Comprehensive YOLOX-only analysis with file outputs"""
     print("=" * 60)
-    print("🔍 YOLOX COMPREHENSIVE ANALYSIS")
+    print(" YOLOX COMPREHENSIVE ANALYSIS")
     print("=" * 60)
     
     detector = YOLOXDetector()
     
     if detector.model is None:
-        print("❌ Cannot run - YOLOX not available")
+        print("[ERROR] Cannot run - YOLOX not available")
         return
     
     # Process images
@@ -714,10 +1080,10 @@ def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path:
     
     for img_path in [image1_path, image2_path]:
         if not os.path.exists(img_path):
-            print(f"❌ {img_path} not found")
+            print(f"[ERROR] {img_path} not found")
             continue
         
-        print(f"\n📸 Processing {img_path}")
+        print(f"\n Processing {img_path}")
         print("-" * 40)
         
         # Run detection
@@ -730,15 +1096,15 @@ def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path:
             # Analyze results
             analysis = detector.analyze_detections(detections)
             
-            print(f"✅ Objects detected: {len(detections)}")
-            print(f"📁 Results saved: {json_path}")
-            print(f"🖼️  Visualization: {vis_path}")
-            print(f"📊 Categories: {analysis['categories']}")
-            print(f"💯 Confidence range: {analysis['confidence_stats']['min']:.3f} - {analysis['confidence_stats']['max']:.3f}")
+            print(f"[OK] Objects detected: {len(detections)}")
+            print(f" Results saved: {json_path}")
+            print(f"  Visualization: {vis_path}")
+            print(f" Categories: {analysis['categories']}")
+            print(f" Confidence range: {analysis['confidence_stats']['min']:.3f} - {analysis['confidence_stats']['max']:.3f}")
             
             # Show top detections
             if len(detections) > 0:
-                print("🏆 Top detections:")
+                print(" Top detections:")
                 sorted_detections = sorted(detections, key=lambda x: x['confidence'], reverse=True)
                 for i, det in enumerate(sorted_detections[:5], 1):
                     print(f"  {i}. {det['object']}: {det['confidence']:.3f}")
@@ -750,16 +1116,16 @@ def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path:
             }
             total_objects += len(detections)
         else:
-            print(f"❌ No objects detected in {img_path}")
+            print(f"[ERROR] No objects detected in {img_path}")
     
     # Summary
     if all_results:
         print(f"\n{'='*60}")
-        print("📈 YOLOX SUMMARY")
+        print(" YOLOX SUMMARY")
         print(f"{'='*60}")
         print(f"🔢 Total objects detected: {total_objects}")
-        print(f"📁 Results saved to: outputs/yolox_*")
-        print(f"🎯 Analysis complete!")
+        print(f" Results saved to: outputs/yolox_*")
+        print(f" Analysis complete!")
         
         # Compare if we have both images
         if len(all_results) == 2:
@@ -771,7 +1137,7 @@ def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path:
             diff1 = obj1 - obj2
             diff2 = obj2 - obj1
             
-            print(f"\n🔍 COMPARISON:")
+            print(f"\n COMPARISON:")
             print(f"   Common objects: {sorted(common)}")
             print(f"   Only in {os.path.basename(imgs[0])}: {sorted(diff1)}")
             print(f"   Only in {os.path.basename(imgs[1])}: {sorted(diff2)}")
@@ -779,6 +1145,188 @@ def comprehensive_yolox_analysis(image1_path: str = "IMG_1464.jpg", image2_path:
     return all_results
 
 
+def test_confusion_matrix(image_path: str = "test_photos/images/bedroom1.jpeg"):
+    """Easy test function for confusion matrix - just call this!"""
+    print(f" TESTING YOLOX CONFUSION MATRIX")
+    print(f"Image: {image_path}")
+
+    try:
+        detector = YOLOXDetector()
+        detections = detector.detect_objects(image_path)
+
+        if detections:
+            print(f"[OK] SUCCESS: Detected {len(detections)} objects")
+            base_name = os.path.splitext(os.path.basename(image_path))[0]
+            vis_path = f"outputs/yolox_{base_name}_comparison.jpg"
+            print(f"  Comparison visualization saved: {vis_path}")
+            return True
+        else:
+            print("[ERROR] No objects detected")
+            return False
+
+    except Exception as e:
+        print(f"[ERROR] Test failed: {e}")
+        return False
+
+
+def test_all_photos(test_photos_dir: str = "test_photos", use_gpu=True):
+    """
+    Test YOLOX on all images in the test_photos directory
+    
+    Args:
+        test_photos_dir: Directory containing images/ and labels/ subdirectories
+        use_gpu: Whether to use GPU if available
+    
+    Returns:
+        dict: Summary results for all tested images
+    """
+    import time
+    start_time = time.time()
+    
+    print("="*60)
+    print("TESTING YOLOX ON ALL TEST PHOTOS")
+    print("="*60)
+    
+    images_dir = os.path.join(test_photos_dir, "images")
+    labels_dir = os.path.join(test_photos_dir, "labels")
+    
+    if not os.path.exists(images_dir):
+        print(f"[ERROR] Images directory not found: {images_dir}")
+        return {}
+    
+    if not os.path.exists(labels_dir):
+        print(f"[ERROR] Labels directory not found: {labels_dir}")
+        return {}
+    
+    # Get all image files
+    image_extensions = ('.jpg', '.jpeg', '.png')
+    image_files = [f for f in os.listdir(images_dir) 
+                   if f.lower().endswith(image_extensions)]
+    image_files.sort()
+    
+    if not image_files:
+        print(f"[ERROR] No image files found in: {images_dir}")
+        return {}
+    
+    print(f"\nFound {len(image_files)} test images")
+    print("-"*60)
+    
+    # Process each image
+    all_results = {}
+    successful_tests = 0
+    failed_tests = 0
+    
+    for i, image_file in enumerate(image_files, 1):
+        # Construct paths
+        image_path = os.path.join(images_dir, image_file)
+        base_name = os.path.splitext(image_file)[0]
+        label_file = f"{base_name}.json"
+        label_path = os.path.join(labels_dir, label_file)
+        
+        # Check if label file exists
+        if not os.path.exists(label_path):
+            print(f"\n[{i}/{len(image_files)}] [WARNING]  Skipping {image_file} - no matching label file")
+            failed_tests += 1
+            continue
+        
+        print(f"\n[{i}/{len(image_files)}]  Testing: {image_file}")
+        print(f"              Label: {label_file}")
+        
+        try:
+            # Run YOLOX with confusion matrix analysis
+            results = yolox(image_path, label_path, use_gpu=use_gpu, create_overlay=True)
+            
+            # Store results
+            all_results[image_file] = {
+                'results': results,
+                'image_path': image_path,
+                'label_path': label_path,
+                'status': 'success'
+            }
+            
+            # Print summary for this image
+            print(f"   [OK] mAP: {results['mean_average_precision']:.4f}, "
+                  f"mF1: {results['mean_f1_score']:.4f}, "
+                  f"Unmatched: {results['unmatched_objects']}, "
+                  f"Missing: {results['missing_objects']}")
+            
+            successful_tests += 1
+            
+        except Exception as e:
+            print(f"   [ERROR] Failed: {str(e)}")
+            all_results[image_file] = {
+                'error': str(e),
+                'image_path': image_path,
+                'label_path': label_path,
+                'status': 'failed'
+            }
+            failed_tests += 1
+    
+    # Print overall summary
+    print("\n" + "="*60)
+    print(" OVERALL TEST SUMMARY")
+    print("="*60)
+    print(f"Total images: {len(image_files)}")
+    print(f"Successful: {successful_tests}")
+    print(f"Failed: {failed_tests}")
+    
+    # Calculate average metrics across successful tests
+    if successful_tests > 0:
+        avg_map = sum(r['results']['mean_average_precision'] 
+                     for r in all_results.values() 
+                     if r['status'] == 'success') / successful_tests
+        avg_f1 = sum(r['results']['mean_f1_score'] 
+                    for r in all_results.values() 
+                    if r['status'] == 'success') / successful_tests
+        
+        print(f"\nAverage Metrics Across All Tests:")
+        print(f"  Average mAP: {avg_map:.4f}")
+        print(f"  Average mF1: {avg_f1:.4f}")
+        
+        # Show per-image results
+        print(f"\nPer-Image Results:")
+        print("-"*60)
+        for image_file, result_data in all_results.items():
+            if result_data['status'] == 'success':
+                res = result_data['results']
+                print(f"{image_file:20s} | mAP: {res['mean_average_precision']:.4f} | "
+                      f"mF1: {res['mean_f1_score']:.4f} | "
+                      f"Unmatched: {res['unmatched_objects']:2d} | "
+                      f"Missing: {res['missing_objects']:2d}")
+    
+    print("="*60)
+    
+    # Display total execution time
+    elapsed_time = time.time() - start_time
+    print(f"\nTotal Execution Time: {elapsed_time:.2f} seconds ({elapsed_time/60:.2f} minutes)")
+    print("="*60)
+    
+    return all_results
+
 if __name__ == "__main__":
-    # Run comprehensive YOLOX analysis
-    comprehensive_yolox_analysis()
+    import sys
+    
+    # Check if user wants to test all photos
+    if len(sys.argv) > 1 and sys.argv[1] == "--all":
+        # Test all photos in test_photos directory
+        test_all_photos(test_photos_dir="test_photos", use_gpu=True)
+    else:
+        # Test single image (default behavior matching rfdetr.py interface)
+        print("="*60)
+        print("Testing YOLOX with model_tests.py interface")
+        print("="*60)
+        print("Tip: Run with '--all' to test all images in test_photos/")
+        print("="*60)
+        
+        # Example usage matching rfdetr.py
+        image_path = "test_photos/images/bedroom1.jpeg"
+        reference_json_path = "test_photos/labels/bedroom1.json"
+        
+        # Run YOLOX with confusion matrix analysis
+        results = yolox(image_path, reference_json_path, use_gpu=True, create_overlay=True)
+        
+        print("\n" + "="*60)
+        print("Test Complete!")
+        print("="*60)
+        print("\nTo test all images, run: python yolox.py --all")
+        print("="*60)

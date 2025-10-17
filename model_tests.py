@@ -91,16 +91,20 @@ class ConfusionMatrix:
         return (true_positives + true_negatives) / (true_positives + false_positives + false_negatives + true_negatives)
 
     def get_precision(self, true_positives, false_positives):
-        return true_positives / (true_positives + false_positives)
+        denominator = true_positives + false_positives
+        return true_positives / denominator if denominator > 0 else 0
 
     def get_sensitivity(self, true_positives, false_negatives):
-        return true_positives / (true_positives + false_negatives)
+        denominator = true_positives + false_negatives
+        return true_positives / denominator if denominator > 0 else 0
 
     def get_specificity(self, true_negatives, false_positives):
-        return true_negatives / (true_negatives + false_positives)
+        denominator = true_negatives + false_positives
+        return true_negatives / denominator if denominator > 0 else 0
 
     def get_f1_score(self, precision, sensitivity):
-        return 2 * precision * sensitivity / (precision + sensitivity)
+        denominator = precision + sensitivity
+        return 2 * precision * sensitivity / denominator if denominator > 0 else 0
 
 
     def get_matrix_metrics(self):
@@ -126,7 +130,7 @@ class ConfusionMatrix:
         mean_average_precision = 0
         for item in self.class_metrics_array:
             mean_average_precision += item.precision
-        return mean_average_precision / len(self.class_metrics_array)
+        return mean_average_precision / len(self.class_metrics_array) if len(self.class_metrics_array) > 0 else 0
 
     def set_class_metrics(self, class_name):
         class_index = self.get_class_index(class_name)
@@ -196,9 +200,9 @@ class ConfusionMatrix:
             if item.precision > 0:
                 mean_average_precision += item.precision
                 num_classes += 1
-            
-        self.mean_average_precision = mean_average_precision / num_classes
-        return mean_average_precision / len(self.class_metrics_array)
+
+        self.mean_average_precision = mean_average_precision / num_classes if num_classes > 0 else 0
+        return mean_average_precision / len(self.class_metrics_array) if len(self.class_metrics_array) > 0 else 0
 
     def set_mean_f1_score(self):
         mean_f1_score = 0
@@ -207,9 +211,9 @@ class ConfusionMatrix:
             if item.f1_score > 0:
                 mean_f1_score += item.f1_score
                 num_classes += 1
-        
-        self.mean_f1_score = mean_f1_score / num_classes
-        return mean_f1_score / len(self.class_metrics_array)
+
+        self.mean_f1_score = mean_f1_score / num_classes if num_classes > 0 else 0
+        return mean_f1_score / len(self.class_metrics_array) if len(self.class_metrics_array) > 0 else 0
 
     def set_mean_accuracy(self):
         mean_accuracy = 0
@@ -278,7 +282,7 @@ class ConfusionMatrix:
         
         if has_match:
             self.increment_cell(reference_object.class_name, detected_object.class_name)
-            self.reference_object_array.remove(reference_object)
+            #self.reference_object_array.remove(reference_object)
         else:
             self.unmatched_objects.append(detected_object)
 

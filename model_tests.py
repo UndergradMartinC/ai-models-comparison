@@ -215,9 +215,8 @@ class ConfusionMatrix:
         mean_accuracy = 0
         num_classes = 0
         for item in self.class_metrics_array:
-            if item.accuracy > 0:
-                mean_accuracy += item.accuracy
-                num_classes += 1
+            mean_accuracy += item.accuracy
+            num_classes += 1
         self.mean_accuracy = mean_accuracy / num_classes
         return mean_accuracy / len(self.class_metrics_array)
 

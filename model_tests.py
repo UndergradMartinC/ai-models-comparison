@@ -56,6 +56,7 @@ class ConfusionMatrix:
         self.class_metrics_array = self.make_class_metrics_array()
         self.mean_average_precision = 0
         self.mean_f1_score = 0
+        self.mean_accuracy = 0
         self.unmatched_objects = []
         self.missing_objects = []
 
@@ -85,6 +86,8 @@ class ConfusionMatrix:
         return self.index_dict[class_name]
 
     def get_accuracy(self, true_positives, false_positives, false_negatives, true_negatives):
+        if (true_positives + false_positives + false_negatives + true_negatives) <= 0:
+            return 0
         return (true_positives + true_negatives) / (true_positives + false_positives + false_negatives + true_negatives)
 
     def get_precision(self, true_positives, false_positives):
@@ -107,8 +110,9 @@ class ConfusionMatrix:
         
         self.set_mean_average_precision()
         self.set_mean_f1_score()
+        self.set_mean_accuracy()
 
-        return self.class_metrics_array, self.mean_average_precision, self.mean_f1_score
+        return self.class_metrics_array, self.mean_average_precision, self.mean_f1_score, self.mean_accuracy
 
 
     def set_reference_json(self, reference_json):
@@ -206,6 +210,16 @@ class ConfusionMatrix:
         
         self.mean_f1_score = mean_f1_score / num_classes
         return mean_f1_score / len(self.class_metrics_array)
+
+    def set_mean_accuracy(self):
+        mean_accuracy = 0
+        num_classes = 0
+        for item in self.class_metrics_array:
+            if item.accuracy > 0:
+                mean_accuracy += item.accuracy
+                num_classes += 1
+        self.mean_accuracy = mean_accuracy / num_classes
+        return mean_accuracy / len(self.class_metrics_array)
 
     def area_is_similar(self, object, reference_object):
         """

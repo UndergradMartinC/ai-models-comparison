@@ -81,9 +81,9 @@ def detect_objects_in_image(image_path, use_gpu=True):
         device = setup_device(use_gpu)
         
         # Load model and processor
-        print("Loading RF-DETR model...")
-        model = RTDetrForObjectDetection.from_pretrained("PekingU/rtdetr_r50vd")
-        processor = RTDetrImageProcessor.from_pretrained("PekingU/rtdetr_r50vd")
+        print("Loading RF-DETR model (ResNet-101 - most powerful variant)...")
+        model = RTDetrForObjectDetection.from_pretrained("PekingU/rtdetr_r101vd")
+        processor = RTDetrImageProcessor.from_pretrained("PekingU/rtdetr_r101vd")
         model = model.to(device)
         model.eval()
         

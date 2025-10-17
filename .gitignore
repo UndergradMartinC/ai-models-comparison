@@ -20,3 +20,5 @@ dist/
 #result images
 *results.jpg
 *result.jpg
+
+*.pth

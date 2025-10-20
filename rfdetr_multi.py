@@ -55,10 +55,10 @@ def rfdetr(image_path, reference_json_path, use_gpu=True, create_overlay=True):
         confusion_matrix.handle_object_data(obj['class'], obj['bbox'])
     
     # Get metrics and format results
-    class_metrics, mean_ap, mean_f1 = confusion_matrix.get_matrix_metrics()
+    class_metrics, mean_ap, mean_f1, mean_accuracy = confusion_matrix.get_matrix_metrics()
     
     # Format and print results
-    results = format_results(class_metrics, mean_ap, mean_f1, confusion_matrix)
+    results = format_results(class_metrics, mean_ap, mean_f1, mean_accuracy, confusion_matrix)
     """
     # Add overlay path to results
     if overlay_path:
@@ -217,7 +217,7 @@ def get_coco_class_mapping():
     return coco_mapping
 
 
-def format_results(class_metrics, mean_ap, mean_f1, confusion_matrix):
+def format_results(class_metrics, mean_ap, mean_f1, average_accuracy, confusion_matrix):
     """
     Format confusion matrix results for display
     
@@ -233,6 +233,7 @@ def format_results(class_metrics, mean_ap, mean_f1, confusion_matrix):
     results = {
         'mean_average_precision': mean_ap,
         'mean_f1_score': mean_f1,
+        'average_accuracy': average_accuracy,
         'class_metrics': {},
         'confusion_matrix': confusion_matrix.get_confusion_matrix().tolist(),
         'unmatched_objects': len(confusion_matrix.unmatched_objects),
@@ -242,6 +243,7 @@ def format_results(class_metrics, mean_ap, mean_f1, confusion_matrix):
     # Format class-specific metrics
     for metric in class_metrics:
         results['class_metrics'][metric.class_name] = {
+            'accuracy': metric.accuracy,
             'precision': metric.precision,
             'sensitivity': metric.sensitivity,
             'specificity': metric.specificity,
@@ -442,10 +444,10 @@ def rfdetr_with_overlay(image_path, reference_json_path, use_gpu=True, save_over
         confusion_matrix.handle_object_data(obj['class'], obj['bbox'])
     
     # Get metrics and format results
-    class_metrics, mean_ap, mean_f1 = confusion_matrix.get_matrix_metrics()
+    class_metrics, mean_ap, mean_f1, average_accuracy = confusion_matrix.get_matrix_metrics()
     
     # Format and print results
-    results = format_results(class_metrics, mean_ap, mean_f1, confusion_matrix)
+    results = format_results(class_metrics, mean_ap, mean_f1, average_accuracy, confusion_matrix)
     print_results(results)
     
     return results, overlay_path
@@ -641,7 +643,7 @@ def test_confusion_matrix():
         print(f"  Processed: {obj['class']} at {obj['bbox']}")
     
     # Get metrics and format results
-    class_metrics, mean_ap, mean_f1 = confusion_matrix.get_matrix_metrics()
+    class_metrics, mean_ap, mean_f1, average_accuracy = confusion_matrix.get_matrix_metrics()
     
     # Print key results
     print(f"\n" + "="*60)
@@ -717,8 +719,10 @@ if __name__ == "__main__":
     import sys
     
     # Check if user wants to test all photos
-    if len(sys.argv) > 1 and sys.argv[1] == "--all":
+    if len(sys.argv) > 1 and ("--all" in sys.argv) and ("--no-gpu" in sys.argv):
         # Test all photos in test_photos directory
+        test_all_photos(test_photos_dir="test_photos", use_gpu=False)
+    elif len(sys.argv) > 1 and ("--all" in sys.argv):
         test_all_photos(test_photos_dir="test_photos", use_gpu=True)
     else:
         # Test single image (default behavior matching yolox.py interface)

@@ -213,7 +213,7 @@ class GroundingDINODetector:
 
             # Get matrix metrics
             if matrix is not None:
-                class_metrics, mean_ap, mean_f1 = matrix.get_matrix_metrics()
+                class_metrics, mean_ap, mean_f1, mean_accuracy = matrix.get_matrix_metrics()
                 print(f" Confusion Matrix Results: mAP={mean_ap:.3f}, mF1={mean_f1:.3f}")
 
                 # Print per-class metrics for detected classes
@@ -546,10 +546,10 @@ def grounding_dino(image_path, reference_json_path, use_gpu=True, create_overlay
         confusion_matrix.handle_object_data(obj['class'], obj['bbox'])
     
     # Get metrics and format results
-    class_metrics, mean_ap, mean_f1 = confusion_matrix.get_matrix_metrics()
+    class_metrics, mean_ap, mean_f1, mean_accuracy = confusion_matrix.get_matrix_metrics()
     
     # Format and print results
-    results = format_results(class_metrics, mean_ap, mean_f1, confusion_matrix)
+    results = format_results(class_metrics, mean_ap, mean_f1, mean_accuracy, confusion_matrix)
     print_results(results)
     
     return results
@@ -640,7 +640,7 @@ def detect_objects_in_image(image_path, use_gpu=True):
         return []
 
 
-def format_results(class_metrics, mean_ap, mean_f1, confusion_matrix):
+def format_results(class_metrics, mean_ap, mean_f1, mean_accuracy, confusion_matrix):
     """
     Format confusion matrix results for display
     
@@ -979,8 +979,10 @@ if __name__ == "__main__":
     import sys
     
     # Check if user wants to test all photos
-    if len(sys.argv) > 1 and sys.argv[1] == "--all":
+    if len(sys.argv) > 1 and ("--all" in sys.argv) and ("--no-gpu" in sys.argv):
         # Test all photos in test_photos directory
+        test_all_photos(test_photos_dir="test_photos", use_gpu=False)
+    elif len(sys.argv) > 1 and ("--all" in sys.argv):
         test_all_photos(test_photos_dir="test_photos", use_gpu=True)
     else:
         # Test single image (default behavior matching yolox.py interface)

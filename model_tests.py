@@ -28,6 +28,7 @@ class ObjectMetrics:
         self.sensitivity = 0
         self.specificity = 0
         self.f1_score = 0
+        self.accuracy = 0
 
     def set_precision(self, precision):
         self.precision = precision
@@ -37,6 +38,8 @@ class ObjectMetrics:
         self.specificity = specificity
     def set_f1_score(self, f1_score):
         self.f1_score = f1_score
+    def set_accuracy(self, accuracy):
+        self.accuracy = accuracy
 
 
 class ConfusionMatrix:
@@ -175,11 +178,13 @@ class ConfusionMatrix:
         sensitivity = self.get_sensitivity(true_positives, false_negatives) if (true_positives + false_negatives) > 0 else 0
         specificity = self.get_specificity(true_negatives, false_positives) if (true_negatives + false_positives) > 0 else 0
         f1_score = self.get_f1_score(precision, sensitivity) if (precision + sensitivity) > 0 else 0
+        accuracy = self.get_accuracy(true_positives, false_positives, false_negatives, true_negatives)
 
         self.class_metrics_array[class_index].set_precision(precision)
         self.class_metrics_array[class_index].set_sensitivity(sensitivity)
         self.class_metrics_array[class_index].set_specificity(specificity)
         self.class_metrics_array[class_index].set_f1_score(f1_score)
+        self.class_metrics_array[class_index].set_accuracy(accuracy)
 
         return precision, sensitivity, specificity, f1_score
 

@@ -50,10 +50,10 @@ def rfdetr(image_path, reference_json_path, use_gpu=True, create_overlay=True):
         confusion_matrix.handle_object_data(obj['class'], obj['bbox'])
     
     # Get metrics and format results
-    class_metrics, mean_ap, mean_f1 = confusion_matrix.get_matrix_metrics()
+    class_metrics, mean_ap, mean_f1, mean_accuracy = confusion_matrix.get_matrix_metrics()
     
     # Format and print results
-    results = format_results(class_metrics, mean_ap, mean_f1, confusion_matrix)
+    results = format_results(class_metrics, mean_ap, mean_f1, mean_accuracy, confusion_matrix)
     """
     # Add overlay path to results
     if overlay_path:
@@ -212,7 +212,7 @@ def get_coco_class_mapping():
     return coco_mapping
 
 
-def format_results(class_metrics, mean_ap, mean_f1, confusion_matrix):
+def format_results(class_metrics, mean_ap, mean_f1, mean_accuracy, confusion_matrix):
     """
     Format confusion matrix results for display
     
@@ -437,10 +437,10 @@ def rfdetr_with_overlay(image_path, reference_json_path, use_gpu=True, save_over
         confusion_matrix.handle_object_data(obj['class'], obj['bbox'])
     
     # Get metrics and format results
-    class_metrics, mean_ap, mean_f1 = confusion_matrix.get_matrix_metrics()
+    class_metrics, mean_ap, mean_f1, mean_accuracy = confusion_matrix.get_matrix_metrics()
     
     # Format and print results
-    results = format_results(class_metrics, mean_ap, mean_f1, confusion_matrix)
+    results = format_results(class_metrics, mean_ap, mean_f1, mean_accuracy, confusion_matrix)
     print_results(results)
     
     return results, overlay_path
@@ -499,7 +499,7 @@ def test_confusion_matrix():
         print(f"  Processed: {obj['class']} at {obj['bbox']}")
     
     # Get metrics and format results
-    class_metrics, mean_ap, mean_f1 = confusion_matrix.get_matrix_metrics()
+    class_metrics, mean_ap, mean_f1, mean_accuracy = confusion_matrix.get_matrix_metrics()
     
     # Print key results
     print(f"\n" + "="*60)

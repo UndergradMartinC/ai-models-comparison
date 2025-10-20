@@ -1299,6 +1299,7 @@ def test_all_photos(test_photos_dir: str = "test_photos", use_gpu=True):
     # Display total execution time
     elapsed_time = time.time() - start_time
     print(f"\nTotal Execution Time: {elapsed_time:.2f} seconds ({elapsed_time/60:.2f} minutes)")
+    print(f"Total Execution Time per image: {elapsed_time/len(image_files):.2f} seconds")
     print("="*60)
     
     return all_results

@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+*.egg
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Images (test images, outputs)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.webp
+
+# Test directories
+test_photos/
+uploads/
+outputs/
+
+# Unnecessary scripts
+rfdetr.py
+rfdetr_multi.py
+yolox.py
+main.py
+yolox_x.pth
+
+# Documentation
+README.md
+*.md
+
+# Sample/test files
+sample_ground_truth.json
+before.jpg
+after.jpg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+

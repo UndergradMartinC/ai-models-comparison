@@ -205,6 +205,8 @@ async def run_model(
     ref_bytes = await reference_json.read()
     reference_objects = _parse_reference_json_bytes(ref_bytes)
 
+    _run_grounding_dino(image_path, reference_objects, use_gpu=use_gpu, create_overlay=create_overlay)
+
     # Execute
     started = time.time()
     try:

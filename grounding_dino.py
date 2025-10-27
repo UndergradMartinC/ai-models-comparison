@@ -8,6 +8,7 @@ import numpy as np
 import json
 import os
 import warnings
+import torch
 from typing import List, Dict
 from collections import Counter
 from model_tests import ConfusionMatrix
@@ -42,7 +43,6 @@ class GroundingDINODetector:
     def _get_device(self, device: str):
         """Get appropriate device"""
         if device == "auto":
-            import torch
             if torch.backends.mps.is_available():
                 return torch.device("mps")
             elif torch.cuda.is_available():
@@ -53,22 +53,31 @@ class GroundingDINODetector:
     
     def _load_model(self):
         """Load Grounding DINO model"""
-        if not GROUNDINGDINO_AVAILABLE:
-            print("[WARNING]  Grounding DINO not available")
-            return False
-        
+        # Import runtime dependency lazily to provide clearer error messaging
         try:
-            weights_path = "weights/groundingdino_swint_ogc.pth"
-            config_path = "weights/GroundingDINO_SwinT_OGC.py"
-            
-            if not all(os.path.exists(p) for p in [weights_path, config_path]):
-                print("[ERROR] Grounding DINO model files not found")
+            from groundingdino.util.inference import load_model as gd_load_model
+        except Exception as e:
+            print("[ERROR] GroundingDINO package not installed. Install with:"
+                  " pip install 'git+https://github.com/IDEA-Research/GroundingDINO.git'")
+            print(f"        Original import error: {e}")
+            return False
+
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            weights_path = os.path.join(base_dir, "weights", "groundingdino_swint_ogc.pth")
+            config_path = os.path.join(base_dir, "weights", "GroundingDINO_SwinT_OGC.py")
+
+            if not os.path.exists(weights_path):
+                print(f"[ERROR] Weights not found: {os.path.abspath(weights_path)}")
                 return False
-            
-            self.model = load_model(config_path, weights_path, device="cpu")
+            if not os.path.exists(config_path):
+                print(f"[ERROR] Config not found: {os.path.abspath(config_path)}")
+                return False
+
+            self.model = gd_load_model(config_path, weights_path, device=str(self.device))
             print("[OK] Grounding DINO loaded successfully!")
             return True
-            
+
         except Exception as e:
             print(f"[ERROR] Failed to load Grounding DINO: {e}")
             return False

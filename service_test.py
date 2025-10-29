@@ -1,11 +1,38 @@
+"""
+Service Test Script for Grounding DINO API
+
+GPU Execution Path Trace:
+==========================
+1. service_test.py (this file):
+   - Sends use_gpu=True as form data to API endpoint
+   - Line 22: data = {"use_gpu": str(use_gpu).lower(), ...}
+
+2. dinoAPI.py (API endpoint):
+   - Line 198: Receives use_gpu parameter as Form field
+   - Line 213: Passes to _run_grounding_dino(use_gpu=use_gpu)
+   - Line 69:  device = "auto" if use_gpu else "cpu"
+   - Line 70:  detector = GroundingDINODetector(device=device)
+   - Line 98:  predict() called with device="cuda" if use_gpu else "cpu"
+
+3. grounding_dino.py (Core detector):
+   - Line 35:  self.device = self._get_device(device)
+   - Line 48:  Returns torch.device("cuda") if torch.cuda.is_available()
+   - Line 77:  self.model = gd_load_model(..., device=str(self.device))
+                ^^^^^^ MODEL LOADED ON GPU HERE ^^^^^^
+
+Result: When USE_GPU=True, the model runs on CUDA GPU throughout the entire pipeline.
+"""
+
 import os
 import requests
 import time
 from pathlib import Path
 
-# Change this to your API endpoint
+# Configuration
 IP = "https://latest-160413876167.us-central1.run.app"  # Cloud endpoint
 # IP = "http://localhost:8080"  # For local testing
+USE_GPU = True  # Set to False to use CPU only
+CREATE_OVERLAY = False
 
 def test_photo(photo_path, json_path, use_gpu=True, create_overlay=True):
     """Test a single photo with its corresponding reference JSON."""
@@ -55,6 +82,8 @@ def main():
     
     print(f"🌐 Testing endpoint: {IP}")
     print(f"📁 Found {len(image_files)} images to test")
+    print(f"🖥️  GPU Mode: {'ENABLED ✅' if USE_GPU else 'DISABLED (CPU only)'}")
+    print(f"🎨 Overlay Creation: {'ENABLED' if CREATE_OVERLAY else 'DISABLED'}")
     print("=" * 80)
     
     # Cold start test with first image
@@ -66,7 +95,7 @@ def main():
     else:
         print(f"\n🧪 COLD START TEST: {first_image.name}")
         print("-" * 80)
-        result, elapsed = test_photo(str(first_image), str(first_json))
+        result, elapsed = test_photo(str(first_image), str(first_json), use_gpu=USE_GPU, create_overlay=CREATE_OVERLAY)
         
         if "error" in result:
             print(f"❌ Error: {result['error']}")
@@ -80,17 +109,21 @@ def main():
         else:
             print(f"✅ Success")
             print(f"⏱️  Request time: {elapsed:.2f}s")
-            exec_time = result.get('execution_time_seconds', 0)
-            if exec_time:
-                print(f"⏱️  Server execution time: {exec_time:.2f}s")
+            print(f"⏱️  Server execution time: {result['execution_time_seconds']:.2f}s")
             
             # Print metrics if available
-            comp_results = result.get("comparison_results", {})
-            if comp_results:
-                print(f"\n📊 Metrics:")
-                print(f"   Mean AP: {comp_results.get('mean_ap', 'N/A'):.3f}")
-                print(f"   Mean F1: {comp_results.get('mean_f1', 'N/A'):.3f}")
-                print(f"   Mean Accuracy: {comp_results.get('mean_accuracy', 'N/A'):.3f}")
+            comp_results = result["comparison_results"]
+            print(f"\n📊 Metrics:")
+            print(f"   Mean AP: {comp_results['mean_average_precision']:.3f}")
+            print(f"   Mean F1: {comp_results['mean_f1_score']:.3f}")
+            print(f"   Unmatched: {comp_results['unmatched_objects']}")
+            print(f"   Missing: {comp_results['missing_objects']}")
+            
+            # Show confusion pairs if available
+            if comp_results.get('confusion_pairs'):
+                print(f"\n🎯 Top Detections:")
+                for pair in comp_results['confusion_pairs'][:5]:  # Show top 5
+                    print(f"      {pair['true']} -> {pair['pred']} (count: {pair['count']})")
         
         print("=" * 80)
     
@@ -111,7 +144,7 @@ def main():
                 continue
             
             print(f"\n[{idx}/{len(image_files)}] Testing: {image_path.name}")
-            result, elapsed = test_photo(str(image_path), str(json_path))
+            result, elapsed = test_photo(str(image_path), str(json_path), use_gpu=USE_GPU, create_overlay=CREATE_OVERLAY)
             
             if "error" in result:
                 print(f"   ❌ Error: {result['error']}")
@@ -121,20 +154,24 @@ def main():
                     "elapsed": elapsed,
                 })
             else:
-                comp_results = result.get("comparison_results", {})
-                mean_ap = comp_results.get('mean_ap', 0)
-                mean_f1 = comp_results.get('mean_f1', 0)
-                mean_acc = comp_results.get('mean_accuracy', 0)
+                comp_results = result["comparison_results"]
+                mean_ap = comp_results["mean_average_precision"]
+                mean_f1 = comp_results["mean_f1_score"]
+                unmatched = comp_results["unmatched_objects"]
+                missing = comp_results["missing_objects"]
+                exec_time = result["execution_time_seconds"]
                 
-                print(f"   ✅ AP: {mean_ap:.3f} | F1: {mean_f1:.3f} | Acc: {mean_acc:.3f} | Time: {elapsed:.2f}s")
+                print(f"   ✅ AP: {mean_ap:.3f} | F1: {mean_f1:.3f} | Unmatched: {unmatched} | Missing: {missing} | Time: {exec_time:.2f}s")
                 
                 results_summary.append({
                     "image": image_path.name,
                     "status": "success",
-                    "elapsed": elapsed,
+                    "request_time": elapsed,
+                    "execution_time": exec_time,
                     "mean_ap": mean_ap,
                     "mean_f1": mean_f1,
-                    "mean_accuracy": mean_acc,
+                    "unmatched": unmatched,
+                    "missing": missing,
                 })
         
         # Summary
@@ -152,14 +189,18 @@ def main():
         if successful:
             avg_ap = sum(r["mean_ap"] for r in successful) / len(successful)
             avg_f1 = sum(r["mean_f1"] for r in successful) / len(successful)
-            avg_acc = sum(r["mean_accuracy"] for r in successful) / len(successful)
-            avg_time = sum(r["elapsed"] for r in successful) / len(successful)
+            total_unmatched = sum(r["unmatched"] for r in successful)
+            total_missing = sum(r["missing"] for r in successful)
+            avg_exec_time = sum(r["execution_time"] for r in successful) / len(successful)
+            avg_request_time = sum(r["request_time"] for r in successful) / len(successful)
             
             print(f"\n📊 Average Metrics (successful tests):")
             print(f"   Mean AP: {avg_ap:.3f}")
             print(f"   Mean F1: {avg_f1:.3f}")
-            print(f"   Mean Accuracy: {avg_acc:.3f}")
-            print(f"   Avg Time: {avg_time:.2f}s")
+            print(f"   Total Unmatched: {total_unmatched}")
+            print(f"   Total Missing: {total_missing}")
+            print(f"   Avg Execution Time: {avg_exec_time:.2f}s (server-side only)")
+            print(f"   Avg Request Time: {avg_request_time:.2f}s (includes network)")
 
 
 if __name__ == "__main__":

@@ -1,67 +1,89 @@
-# Use Python 3.11 slim as base image
-FROM python:3.11-slim
-
-# Set working directory
+## =========================
+## STAGE 1: BUILD EXTENSIONS
+## =========================
+FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04 AS builder
 WORKDIR /app
-
-# Install system dependencies required for OpenCV, PyTorch, etc.
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    git \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    libgl1 \
+ARG DEBIAN_FRONTEND=noninteractive
+# Python + build deps (builder only)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 python3.11-dev python3-pip \
+    git build-essential ninja-build \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
+RUN python3.11 -m pip install -U pip setuptools wheel
 
-# Install PyTorch and dependencies (CPU-only for smaller image size)
-# For GPU support, use: torch torchvision --index-url https://download.pytorch.org/whl/cu118
-RUN pip install --no-cache-dir \
-    torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# Match Torch to CUDA 12.1 (important!)
+RUN python3.11 -m pip install --index-url https://download.pytorch.org/whl/cu121 \
+    torch==2.4.1 torchvision==0.19.1
 
-# Install other Python dependencies
-RUN pip install --no-cache-dir \
-    transformers>=4.30.0 \
-    opencv-python-headless>=4.8.0 \
-    pillow>=9.5.0 \
-    numpy>=1.24.0 \
-    matplotlib>=3.7.0 \
-    fastapi \
-    uvicorn[standard] \
-    python-multipart
+# GroundingDINO (pin the commit; NO build isolation so it sees torch)
+ARG GD_REF=856dde20aee659246248e20734ef9ba5214f5e44
+RUN python3.11 -m pip install --no-build-isolation \
+  "git+https://github.com/IDEA-Research/GroundingDINO.git@${GD_REF}#egg=groundingdino"
 
-# Install GroundingDINO from GitHub
-RUN pip install --no-cache-dir git+https://github.com/IDEA-Research/GroundingDINO.git
-
-# Copy only necessary application files
-COPY dinoAPI.py .
-COPY grounding_dino.py .
-COPY model_tests.py .
-COPY COCO_CLASSES.py .
-
-# Copy model weights and configs
-COPY weights/ ./weights/
-
-# Create directories for uploads and outputs
-RUN mkdir -p uploads outputs
-
-# Expose port 8080
-EXPOSE 8080
-
-# Set environment variables
-ENV HOST=0.0.0.0
-ENV PORT=8080
-ENV PYTHONUNBUFFERED=1
-
-# Healthcheck to ensure the API is responding
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/docs').getcode()" || exit 1
-
-# Run the API
-CMD ["python", "dinoAPI.py"]
-
+## Force-build CUDA ops and verify _C exists
+#RUN python3.11 - <<'PY'
+#import importlib, pathlib, subprocess, sys
+#pkg = importlib.import_module("groundingdino")
+#ops = pathlib.Path(pkg.__file__).parent / "models" / "ops"
+#subprocess.check_call([sys.executable, "setup.py", "build", "install"], cwd=str(ops))
+#m = importlib.import_module("groundingdino.models.GroundingDINO.ms_deform_attn")
+#assert hasattr(m, "_C"), "GroundingDINO ops _C not built!"
+#print("Built:", m.__file__)
+#PY
+#
+## Stash the entire package (code + compiled .so)
+#RUN mkdir -p /artifacts && \
+#    cp -r /usr/local/lib/python3.11/site-packages/groundingdino /artifacts/groundingdino
+#
+#
+## =========================
+## STAGE 2: RUNTIME (SLIM)
+## =========================
+#FROM python:3.11-slim
+#WORKDIR /app
+#
+## Minimal runtime libs for OpenCV, etc.
+#RUN apt-get update && apt-get install -y --no-install-recommends \
+#    libglib2.0-0 libsm6 libxext6 libxrender1 libgomp1 libgl1 \
+#    && rm -rf /var/lib/apt/lists/*
+#
+## CUDA-enabled Torch wheels (bundle CUDA/cuDNN)
+#RUN pip install -U pip setuptools wheel && \
+#    pip install --no-cache-dir \
+#      "transformers>=4.30.0" \
+#      "opencv-python-headless>=4.8.0" \
+#      "pillow>=9.5.0" \
+#      "numpy>=1.24.0" \
+#      "matplotlib>=3.7.0" \
+#      fastapi uvicorn[standard] python-multipart
+#
+## Copy the prebuilt GroundingDINO package from builder (no pip install here)
+#COPY --from=builder /artifacts/groundingdino /usr/local/lib/python3.11/site-packages/groundingdino
+#
+## Optional: extra deps from your requirements.txt
+#COPY requirements.txt .
+#RUN [ -s requirements.txt ] && pip install --no-cache-dir -r requirements.txt || true
+#
+## App files
+#COPY dinoAPI.py grounding_dino.py model_tests.py COCO_CLASSES.py ./
+#COPY weights/ ./weights/
+#RUN mkdir -p uploads outputs
+#
+## Sanity check (fail fast if _C missing)
+#RUN python - <<'PY'
+#import importlib, torch
+#m = importlib.import_module("groundingdino.models.GroundingDINO.ms_deform_attn")
+#print("Torch:", torch.__version__, "CUDA avail:", torch.cuda.is_available())
+#print("GroundingDINO _C present:", hasattr(m, "_C"), "path:", m.__file__)
+#PY
+#
+#
+#EXPOSE 8080
+#ENV HOST=0.0.0.0 PORT=8080 PYTHONUNBUFFERED=1
+#
+#HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+#  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/docs').getcode()" || exit 1
+#
+#CMD ["python", "dinoAPI.py"]
+#

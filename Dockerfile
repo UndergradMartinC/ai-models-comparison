@@ -14,11 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # pip
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
-# PyTorch (CUDA 12.1 wheels) — versions known-good with many DINO stacks
+# PyTorch (CUDA 12.1 wheels) — using 2.0.1 which is available in cu121 index
 RUN python3.11 -m pip install -U pip setuptools wheel && \
     python3.11 -m pip install --no-cache-dir \
       --index-url https://download.pytorch.org/whl/cu121 \
-      torch==2.4.1 torchvision==0.19.1
+      torch==2.0.1 torchvision==0.15.2
 
 # App deps
 RUN python3.11 -m pip install --no-cache-dir \
@@ -52,6 +52,6 @@ EXPOSE 8080
 ENV HOST=0.0.0.0 PORT=8080 PYTHONUNBUFFERED=1
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD python3.11 -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/docs').getcode()" || exit 1
+CMD python3.11 -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/docs').getcode()" || exit 1
 
-CMD ["python3.11", "dinoAPI.py"]
+CMD ["python3.11", "dinoAPI.py"]  

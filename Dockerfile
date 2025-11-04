@@ -14,18 +14,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # pip
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
-# PyTorch (CUDA 12.1 wheels) — using 2.0.1 which is available in cu121 index
+# PyTorch (CUDA 12.1 wheels) — using 2.1.0 which is the earliest available for cu121
 RUN python3.11 -m pip install -U pip setuptools wheel && \
     python3.11 -m pip install --no-cache-dir \
       --index-url https://download.pytorch.org/whl/cu121 \
-      torch==2.0.1 torchvision==0.15.2
+      torch==2.1.0+cu121 torchvision==0.16.0+cu121
 
-# App deps
+# App deps - pin numpy<2 for PyTorch 2.1.0 compatibility, and transformers compatible with torch 2.1
 RUN python3.11 -m pip install --no-cache-dir \
-      "transformers>=4.30.0" \
+      "numpy>=1.24.0,<2.0.0" \
+      "transformers>=4.35.0,<4.50.0" \
       "opencv-python-headless>=4.8.0" \
       "pillow>=9.5.0" \
-      "numpy>=1.24.0" \
       "matplotlib>=3.7.0" \
       fastapi uvicorn[standard] python-multipart
 

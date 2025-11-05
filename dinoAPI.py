@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import traceback
 from typing import Optional, Dict, Any, List
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
@@ -51,52 +52,129 @@ def _parse_reference_json_bytes(data: bytes) -> List[Dict[str, Any]]:
     try:
         payload = json.loads(data.decode("utf-8"))
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid reference JSON: {e}")
+        tb = traceback.format_exc()
+        raise HTTPException(
+            status_code=400, 
+            detail={
+                "error": "Invalid reference JSON",
+                "message": str(e),
+                "traceback": tb
+            }
+        )
 
     # Normalize supported formats to list of objects
     if isinstance(payload, dict) and "objects" in payload:
         return payload["objects"]
     if isinstance(payload, list):
         return payload
-    raise HTTPException(status_code=400, detail="Unsupported reference JSON format. Expected list or { 'objects': [...] }")
+    raise HTTPException(
+        status_code=400, 
+        detail={
+            "error": "Unsupported reference JSON format",
+            "message": "Expected list or { 'objects': [...] }",
+            "received_type": type(payload).__name__,
+            "sample": str(payload)[:200] if payload else None
+        }
+    )
 
 
 def _run_grounding_dino(image_path: str, reference_objects: List[Dict[str, Any]], use_gpu: bool, create_overlay: bool) -> Dict[str, Any]:
     if not LOCAL_IMPORT_OK:
-        raise HTTPException(status_code=500, detail=f"Failed to import local modules: {LOCAL_IMPORT_ERROR_MSG}")
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Failed to import local modules",
+                "message": LOCAL_IMPORT_ERROR_MSG,
+                "traceback": None
+            }
+        )
 
     # Create detector (loads model)
-    device = "auto" if use_gpu else "cpu"
-    detector = GroundingDINODetector(device=device)
+    try:
+        device = "auto" if use_gpu else "cpu"
+        detector = GroundingDINODetector(device=device)
+    except Exception as e:
+        tb = traceback.format_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Failed to create GroundingDINODetector",
+                "message": str(e),
+                "traceback": tb,
+                "device": "auto" if use_gpu else "cpu"
+            }
+        )
 
     if detector.model is None:
-        raise HTTPException(status_code=500, detail="Grounding DINO model not loaded. Check weights/config paths.")
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Grounding DINO model not loaded",
+                "message": "Check weights/config paths",
+                "detector_device": str(detector.device) if hasattr(detector, 'device') else None
+            }
+        )
 
     # Import external GroundingDINO utilities lazily to provide clearer errors
     try:
         from groundingdino.util.inference import load_image, predict
     except Exception as e:
-        raise HTTPException(status_code=500, detail=(
-            "Missing GroundingDINO runtime dependency. Install it first, e.g.: "
-            "pip install 'git+https://github.com/IDEA-Research/GroundingDINO.git' "
-            "and ensure torch/torchvision are installed with CUDA if using GPU. "
-            f"Original error: {e}"
-        ))
+        tb = traceback.format_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Missing GroundingDINO runtime dependency",
+                "message": (
+                    "Install it first, e.g.: "
+                    "pip install 'git+https://github.com/IDEA-Research/GroundingDINO.git' "
+                    "and ensure torch/torchvision are installed with CUDA if using GPU."
+                ),
+                "original_error": str(e),
+                "traceback": tb
+            }
+        )
 
     # Run prediction (replicates detect_objects_in_image and detector.detect_objects logic)
-    image_source, image = load_image(image_path)
-    h, w, _ = image_source.shape
+    try:
+        image_source, image = load_image(image_path)
+        h, w, _ = image_source.shape
+    except Exception as e:
+        tb = traceback.format_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Failed to load image",
+                "message": str(e),
+                "traceback": tb,
+                "image_path": image_path
+            }
+        )
 
     text_query = ". ".join(INDOOR_BUSINESS_CLASSES) + "."
 
-    boxes, confidences, labels = predict(
-        model=detector.model,
-        image=image,
-        caption=text_query,
-        box_threshold=detector.box_threshold,
-        text_threshold=detector.text_threshold,
-        device=("cpu" if not use_gpu or str(detector.device) == "cpu" else "cuda"),
-    )
+    try:
+        boxes, confidences, labels = predict(
+            model=detector.model,
+            image=image,
+            caption=text_query,
+            box_threshold=detector.box_threshold,
+            text_threshold=detector.text_threshold,
+            device=("cpu" if not use_gpu or str(detector.device) == "cpu" else "cuda"),
+        )
+    except Exception as e:
+        tb = traceback.format_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Prediction failed",
+                "message": str(e),
+                "traceback": tb,
+                "text_query": text_query,
+                "box_threshold": detector.box_threshold,
+                "text_threshold": detector.text_threshold,
+                "device": ("cpu" if not use_gpu or str(detector.device) == "cpu" else "cuda")
+            }
+        )
 
     detections_for_cm: List[Dict[str, Any]] = []  # [{'class', 'bbox', 'confidence'}]
     detections_for_save: List[Dict[str, Any]] = []  # [{'object', 'bbox', 'confidence'}]
@@ -141,12 +219,25 @@ def _run_grounding_dino(image_path: str, reference_objects: List[Dict[str, Any]]
         })
 
     # Build confusion matrix from provided reference JSON
-    matrix = ConfusionMatrix(reference_objects)
-    for det in detections_for_cm:
-        matrix.handle_object_data(det["class"], det["bbox"])
+    try:
+        matrix = ConfusionMatrix(reference_objects)
+        for det in detections_for_cm:
+            matrix.handle_object_data(det["class"], det["bbox"])
 
-    class_metrics, mean_ap, mean_f1, mean_accuracy = matrix.get_matrix_metrics()
-    metrics = format_results(class_metrics, mean_ap, mean_f1, mean_accuracy, matrix)
+        class_metrics, mean_ap, mean_f1, mean_accuracy = matrix.get_matrix_metrics()
+        metrics = format_results(class_metrics, mean_ap, mean_f1, mean_accuracy, matrix)
+    except Exception as e:
+        tb = traceback.format_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Failed to compute confusion matrix or metrics",
+                "message": str(e),
+                "traceback": tb,
+                "num_detections": len(detections_for_cm),
+                "num_references": len(reference_objects)
+            }
+        )
     # Remove verbose per-class metrics from API response
     metrics.pop("class_metrics", None)
     # Replace raw confusion matrix with a readable sparse representation
@@ -176,19 +267,36 @@ def _run_grounding_dino(image_path: str, reference_objects: List[Dict[str, Any]]
         metrics["confusion_labels_used"] = sorted(labels_used)
 
     # Persist outputs (side-effects) but don't include in response
+    save_warnings = []
     try:
         detector.save_results(image_path, detections_for_save)
+    except Exception as e:
+        tb = traceback.format_exc()
+        save_warnings.append({
+            "warning": "Failed to save results",
+            "message": str(e),
+            "traceback": tb
+        })
+    
+    try:
         if create_overlay:
             base_name = os.path.splitext(os.path.basename(image_path))[0]
             comparison_path = os.path.join("outputs", f"dino_{base_name}_comparison.jpg")
             detector.create_comparison_visualization(image_path, detections_for_save, matrix, comparison_path)
-    except Exception:
-        # Non-fatal for API response
-        pass
+    except Exception as e:
+        tb = traceback.format_exc()
+        save_warnings.append({
+            "warning": "Failed to create comparison visualization",
+            "message": str(e),
+            "traceback": tb
+        })
 
-    return {
+    result = {
         "comparison_results": metrics,
     }
+    if save_warnings:
+        result["warnings"] = save_warnings
+    return result
 
 
 @app.post("/run")
@@ -198,28 +306,77 @@ async def run_model(
     use_gpu: bool = Form(True),
     create_overlay: bool = Form(True),
 ):
-    # Persist uploads
-    uploads_dir = os.path.join("uploads")
-    image_path = _read_upload_to_disk(image, uploads_dir)
-
-    ref_bytes = await reference_json.read()
-    reference_objects = _parse_reference_json_bytes(ref_bytes)
-
-    _run_grounding_dino(image_path, reference_objects, use_gpu=use_gpu, create_overlay=create_overlay)
-
-    # Execute
     started = time.time()
+    image_path = None
+    
     try:
-        result = _run_grounding_dino(image_path, reference_objects, use_gpu=use_gpu, create_overlay=create_overlay)
-    finally:
-        elapsed = time.time() - started
+        # Persist uploads
+        uploads_dir = os.path.join("uploads")
+        try:
+            image_path = _read_upload_to_disk(image, uploads_dir)
+        except Exception as e:
+            tb = traceback.format_exc()
+            raise HTTPException(
+                status_code=500, 
+                detail={
+                    "error": "Failed to save uploaded image",
+                    "message": str(e),
+                    "traceback": tb,
+                    "filename": getattr(image, 'filename', None)
+                }
+            )
 
-    response = {
-        "status": "ok",
-        "execution_time_seconds": elapsed,
-        "comparison_results": result.get("comparison_results"),
-    }
-    return JSONResponse(content=response)
+        try:
+            ref_bytes = await reference_json.read()
+            reference_objects = _parse_reference_json_bytes(ref_bytes)
+        except HTTPException:
+            raise  # Re-raise HTTPException with details from _parse_reference_json_bytes
+        except Exception as e:
+            tb = traceback.format_exc()
+            raise HTTPException(
+                status_code=500, 
+                detail={
+                    "error": "Failed to read reference JSON",
+                    "message": str(e),
+                    "traceback": tb,
+                    "filename": getattr(reference_json, 'filename', None)
+                }
+            )
+
+        # Execute detection and evaluation
+        result = _run_grounding_dino(image_path, reference_objects, use_gpu=use_gpu, create_overlay=create_overlay)
+        
+        elapsed = time.time() - started
+        
+        response = {
+            "status": "ok",
+            "execution_time_seconds": elapsed,
+            "comparison_results": result.get("comparison_results"),
+            "image_path": image_path
+        }
+        
+        if "warnings" in result:
+            response["warnings"] = result["warnings"]
+        
+        return JSONResponse(content=response)
+        
+    except HTTPException:
+        # Re-raise HTTPExceptions as-is (they already have detailed error info)
+        raise
+    except Exception as e:
+        # Catch any unexpected errors
+        tb = traceback.format_exc()
+        elapsed = time.time() - started
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Unexpected error during execution",
+                "message": str(e),
+                "traceback": tb,
+                "execution_time_seconds": elapsed,
+                "image_path": image_path
+            }
+        )
 
 
 if __name__ == "__main__":

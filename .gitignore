@@ -21,4 +21,4 @@ dist/
 *results.jpg
 *result.jpg
 
-*.pth
+weights/*.pth

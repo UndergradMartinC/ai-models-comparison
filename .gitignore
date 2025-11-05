@@ -22,3 +22,4 @@ dist/
 *result.jpg
 
 weights/*.pth
+*/*.pth

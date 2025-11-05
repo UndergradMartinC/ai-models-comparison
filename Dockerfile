@@ -35,6 +35,9 @@ ARG GD_REF=856dde20aee659246248e20734ef9ba5214f5e44
 RUN python3.11 -m pip install --no-build-isolation \
     "git+https://github.com/IDEA-Research/GroundingDINO.git@${GD_REF}#egg=groundingdino"
 
+# Force numpy<2 after GroundingDINO (its deps try to upgrade to numpy 2.x)
+RUN python3.11 -m pip install --no-cache-dir "numpy>=1.24.0,<2.0.0"
+
 # --- Your app files ---
 COPY dinoAPI.py grounding_dino.py model_tests.py COCO_CLASSES.py ./
 COPY weights/ ./weights/
@@ -51,7 +54,7 @@ PY
 EXPOSE 8080
 ENV HOST=0.0.0.0 PORT=8080 PYTHONUNBUFFERED=1
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-CMD python3.11 -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/docs').getcode()" || exit 1
+#HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+#CMD python3.11 -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/docs').getcode()" || exit 1
 
 CMD ["python3.11", "dinoAPI.py"]  

@@ -29,11 +29,14 @@ RUN python3.11 -m pip install --no-cache-dir \
       "matplotlib>=3.7.0" \
       fastapi uvicorn[standard] python-multipart
 
-# GroundingDINO from source (no build isolation so it sees torch/cuda)
-# Pin to a stable commit; update if you need a newer API
+# GroundingDINO from source - clone and build with proper CUDA support
 ARG GD_REF=856dde20aee659246248e20734ef9ba5214f5e44
-RUN python3.11 -m pip install --no-build-isolation \
-    "git+https://github.com/IDEA-Research/GroundingDINO.git@${GD_REF}#egg=groundingdino"
+RUN git clone https://github.com/IDEA-Research/GroundingDINO.git /tmp/GroundingDINO && \
+    cd /tmp/GroundingDINO && \
+    git checkout ${GD_REF} && \
+    TORCH_CUDA_ARCH_LIST="7.0 7.5 8.0 8.6+PTX" python3.11 -m pip install --no-cache-dir --no-build-isolation . && \
+    cd /app && \
+    rm -rf /tmp/GroundingDINO
 
 # Force numpy<2 after GroundingDINO (its deps try to upgrade to numpy 2.x)
 RUN python3.11 -m pip install --no-cache-dir "numpy>=1.24.0,<2.0.0"
@@ -59,9 +62,18 @@ RUN mkdir -p uploads outputs
 # Sanity check: verify CUDA, Torch, and the _C extension
 RUN python3.11 - <<'PY'
 import importlib, torch
+print("=" * 80)
+print("CUDA EXTENSIONS VERIFICATION")
+print("=" * 80)
 print("Torch:", torch.__version__, "CUDA:", torch.version.cuda, "CUDA avail:", torch.cuda.is_available())
 m = importlib.import_module("groundingdino.models.GroundingDINO.ms_deform_attn")
 print("GroundingDINO _C present:", hasattr(m, "_C"), "at:", m.__file__)
+if hasattr(m, "_C"):
+    print("✅ CUDA extensions compiled successfully!")
+else:
+    print("❌ CUDA extensions NOT compiled - model will fail on GPU!")
+    import sys
+    sys.exit(1)
 PY
 
 EXPOSE 8080

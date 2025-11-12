@@ -60,21 +60,14 @@ RUN python3.11 -c "from transformers import BertModel, BertTokenizer; \
 RUN mkdir -p uploads outputs
 
 # Sanity check: verify CUDA, Torch, and the _C extension
-RUN python3.11 - <<'PY'
-import importlib, torch
-print("=" * 80)
-print("CUDA EXTENSIONS VERIFICATION")
-print("=" * 80)
-print("Torch:", torch.__version__, "CUDA:", torch.version.cuda, "CUDA avail:", torch.cuda.is_available())
-m = importlib.import_module("groundingdino.models.GroundingDINO.ms_deform_attn")
-print("GroundingDINO _C present:", hasattr(m, "_C"), "at:", m.__file__)
-if hasattr(m, "_C"):
-    print("✅ CUDA extensions compiled successfully!")
-else:
-    print("❌ CUDA extensions NOT compiled - model will fail on GPU!")
-    import sys
-    sys.exit(1)
-PY
+RUN python3.11 -c "import importlib, torch, sys; \
+print('=' * 80); \
+print('CUDA EXTENSIONS VERIFICATION'); \
+print('=' * 80); \
+print('Torch:', torch.__version__, 'CUDA:', torch.version.cuda, 'CUDA avail:', torch.cuda.is_available()); \
+m = importlib.import_module('groundingdino.models.GroundingDINO.ms_deform_attn'); \
+print('GroundingDINO _C present:', hasattr(m, '_C'), 'at:', m.__file__); \
+(print('✅ CUDA extensions compiled successfully!') if hasattr(m, '_C') else (print('❌ CUDA extensions NOT compiled - model will fail on GPU!'), sys.exit(1)))"
 
 EXPOSE 8080
 ENV HOST=0.0.0.0 PORT=8080 PYTHONUNBUFFERED=1

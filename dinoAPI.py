@@ -31,6 +31,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Global detector instance (initialized by warmup endpoint)
+_detector_instance: Optional[Any] = None
+
 
 def _read_upload_to_disk(upload: UploadFile, directory: str, target_filename: Optional[str] = None) -> str:
     os.makedirs(directory, exist_ok=True)
@@ -79,6 +82,8 @@ def _parse_reference_json_bytes(data: bytes) -> List[Dict[str, Any]]:
 
 
 def _run_grounding_dino(image_path: str, reference_objects: List[Dict[str, Any]], use_gpu: bool, create_overlay: bool) -> Dict[str, Any]:
+    global _detector_instance
+    
     if not LOCAL_IMPORT_OK:
         raise HTTPException(
             status_code=500, 
@@ -89,31 +94,34 @@ def _run_grounding_dino(image_path: str, reference_objects: List[Dict[str, Any]]
             }
         )
 
-    # Create detector (loads model)
-    try:
-        device = "auto" if use_gpu else "cpu"
-        detector = GroundingDINODetector(device=device)
-    except Exception as e:
-        tb = traceback.format_exc()
-        raise HTTPException(
-            status_code=500, 
-            detail={
-                "error": "Failed to create GroundingDINODetector",
-                "message": str(e),
-                "traceback": tb,
-                "device": "auto" if use_gpu else "cpu"
-            }
-        )
+    # Use global detector instance if available, otherwise create one
+    if _detector_instance is not None:
+        detector = _detector_instance
+    else:
+        try:
+            device = "auto" if use_gpu else "cpu"
+            detector = GroundingDINODetector(device=device)
+        except Exception as e:
+            tb = traceback.format_exc()
+            raise HTTPException(
+                status_code=500, 
+                detail={
+                    "error": "Failed to create GroundingDINODetector",
+                    "message": str(e),
+                    "traceback": tb,
+                    "device": "auto" if use_gpu else "cpu"
+                }
+            )
 
-    if detector.model is None:
-        raise HTTPException(
-            status_code=500, 
-            detail={
-                "error": "Grounding DINO model not loaded",
-                "message": "Check weights/config paths",
-                "detector_device": str(detector.device) if hasattr(detector, 'device') else None
-            }
-        )
+        if detector.model is None:
+            raise HTTPException(
+                status_code=500, 
+                detail={
+                    "error": "Grounding DINO model not loaded",
+                    "message": "Check weights/config paths",
+                    "detector_device": str(detector.device) if hasattr(detector, 'device') else None
+                }
+            )
 
     # Import external GroundingDINO utilities lazily to provide clearer errors
     try:
@@ -297,6 +305,70 @@ def _run_grounding_dino(image_path: str, reference_objects: List[Dict[str, Any]]
     if save_warnings:
         result["warnings"] = save_warnings
     return result
+
+
+@app.post("/warmup")
+async def warmup_model(use_gpu: bool = Form(True)):
+    """
+    Warmup endpoint to pre-load the Grounding DINO model.
+    Call this once at startup to avoid loading delays on the first detection request.
+    """
+    global _detector_instance
+    
+    if not LOCAL_IMPORT_OK:
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Failed to import local modules",
+                "message": LOCAL_IMPORT_ERROR_MSG,
+                "traceback": None
+            }
+        )
+    
+    # Check if model is already loaded
+    if _detector_instance is not None:
+        return JSONResponse(content={
+            "status": "already_loaded",
+            "message": "Model was already loaded",
+            "device": str(_detector_instance.device) if hasattr(_detector_instance, 'device') else "unknown"
+        })
+    
+    # Load the model
+    started = time.time()
+    try:
+        device = "auto" if use_gpu else "cpu"
+        _detector_instance = GroundingDINODetector(device=device)
+    except Exception as e:
+        tb = traceback.format_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Failed to create GroundingDINODetector",
+                "message": str(e),
+                "traceback": tb,
+                "device": "auto" if use_gpu else "cpu"
+            }
+        )
+    
+    if _detector_instance.model is None:
+        _detector_instance = None  # Reset on failure
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Grounding DINO model not loaded",
+                "message": "Check weights/config paths",
+                "detector_device": str(_detector_instance.device) if _detector_instance and hasattr(_detector_instance, 'device') else None
+            }
+        )
+    
+    elapsed = time.time() - started
+    
+    return JSONResponse(content={
+        "status": "ok",
+        "message": "Model loaded successfully",
+        "load_time_seconds": elapsed,
+        "device": str(_detector_instance.device) if hasattr(_detector_instance, 'device') else "unknown"
+    })
 
 
 @app.post("/run")
